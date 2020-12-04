@@ -154,7 +154,7 @@ fun configureJarTasks() {
     }
 }
 
-fun getPropertyFromAnySource(propertyName : String ) : Provider<String> {
+fun getPropertyFromAnySource(propertyName: String): Provider<String> {
     return providers.gradleProperty(propertyName).forUseAtConfigurationTime()
         .orElse(providers.systemProperty(propertyName).forUseAtConfigurationTime())
         .orElse(providers.environmentVariable(propertyName).forUseAtConfigurationTime())
