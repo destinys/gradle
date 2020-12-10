@@ -17,7 +17,6 @@
 import com.gradle.enterprise.gradleplugin.testdistribution.TestDistributionPlugin
 import gradlebuild.basics.BuildEnvironment
 import gradlebuild.basics.accessors.groovy
-import gradlebuild.basics.extension.vendorAndMajorVersion
 import gradlebuild.basics.tasks.ClasspathManifest
 import gradlebuild.basics.testDistributionEnabled
 import gradlebuild.filterEnvironmentVariables
@@ -30,11 +29,10 @@ plugins {
     groovy
     id("gradlebuild.module-identity")
     id("gradlebuild.dependency-modules")
-    id("gradlebuild.available-java-installations")
     id("org.gradle.test-retry")
 }
 
-extensions.create<UnitTestAndCompileExtension>("gradlebuildJava", java)
+extensions.create<UnitTestAndCompileExtension>("gradlebuildJava", tasks)
 
 removeTeamcityTempProperty()
 addDependencies()
@@ -47,15 +45,17 @@ configureTests()
 tasks.registerCITestDistributionLifecycleTasks()
 
 fun configureCompile() {
-    java.targetCompatibility = JavaVersion.VERSION_1_8
-    java.sourceCompatibility = JavaVersion.VERSION_1_8
+    java.toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+        vendor.set(JvmVendorSpec.ADOPTOPENJDK)
+    }
 
     tasks.withType<JavaCompile>().configureEach {
-        configureCompileTask(this, options, buildJvms.compileJvm.get())
+        configureCompileTask(options)
     }
     tasks.withType<GroovyCompile>().configureEach {
         groovyOptions.encoding = "utf-8"
-        configureCompileTask(this, options, buildJvms.compileJvm.get())
+        configureCompileTask(options)
     }
     addCompileAllTask()
 }
@@ -85,17 +85,13 @@ fun configureSourcesVariant() {
     }
 }
 
-fun configureCompileTask(compileTask: AbstractCompile, options: CompileOptions, jdkForCompilation: JavaInstallation) {
-    options.isFork = true
+fun configureCompileTask(options: CompileOptions) {
+    options.release.set(8)
     options.encoding = "utf-8"
     options.isIncremental = true
     options.forkOptions.jvmArgs?.add("-XX:+HeapDumpOnOutOfMemoryError")
     options.forkOptions.memoryMaximumSize = "1g"
-    options.compilerArgs.addAll(mutableListOf("-Xlint:-options", "-Xlint:-path"))
-    compileTask.inputs.property(
-        "javaInstallation",
-        Callable { jdkForCompilation.vendorAndMajorVersion() }
-    )
+    options.compilerArgs.addAll(mutableListOf("-Xlint:-options", "-Xlint:-path", "-Xlint:-varargs", "-Xlint:-unchecked"))
 }
 
 fun configureClasspathManifestGeneration() {
@@ -160,16 +156,17 @@ fun getPropertyFromAnySource(propertyName: String): Provider<String> {
         .orElse(providers.environmentVariable(propertyName).forUseAtConfigurationTime())
 }
 
-fun Test.configureJvmForTest() {
-    val jvmVersionForTest = JavaLanguageVersion.of(getPropertyFromAnySource("testJavaVersion").getOrElse(JavaVersion.current().majorVersion))
+fun Test.jvmVersionForTest(): JavaLanguageVersion {
+    return JavaLanguageVersion.of(getPropertyFromAnySource("testJavaVersion").getOrElse(JavaVersion.current().majorVersion))
+}
 
+fun Test.configureJvmForTest() {
     jvmArgumentProviders.add(CiEnvironmentProvider(this))
     val launcher = project.javaToolchains.launcherFor {
-        languageVersion.set(jvmVersionForTest)
-//        vendor.set(JvmVendorSpec.ORACLE)
+        languageVersion.set(jvmVersionForTest())
     }
     javaLauncher.set(launcher)
-    if (jvmVersionForTest.canCompileOrRun(9)) {
+    if (jvmVersionForTest().canCompileOrRun(9)) {
         // allow embedded executer to modify environment variables
         jvmArgs("--add-opens", "java.base/java.util=ALL-UNNAMED")
         // allow embedded executer to inject legacy types into the system classloader
