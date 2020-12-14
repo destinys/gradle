@@ -171,7 +171,7 @@ fun Test.configureJvmForTest() {
                 "oracle" -> vendor.set(JvmVendorSpec.ORACLE)
                 "openjdk" -> vendor.set(JvmVendorSpec.ADOPTOPENJDK)
             }
-        }.get()
+        }.getOrNull()
     }
     javaLauncher.set(launcher)
     if (jvmVersionForTest().canCompileOrRun(9)) {
