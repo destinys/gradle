@@ -93,7 +93,7 @@ fun configureCompileTask(options: CompileOptions) {
     options.isIncremental = true
     options.forkOptions.jvmArgs?.add("-XX:+HeapDumpOnOutOfMemoryError")
     options.forkOptions.memoryMaximumSize = "1g"
-    options.compilerArgs.addAll(mutableListOf("-Xlint:-options", "-Xlint:-path", "-Xlint:-varargs", "-Xlint:-unchecked"))
+    options.compilerArgs.addAll(mutableListOf("-Xlint:-options", "-Xlint:-path"))
 }
 
 fun configureClasspathManifestGeneration() {
