@@ -63,6 +63,10 @@ class StagePasses(model: CIBuildModel, stage: Stage, prevStage: Stage?, stagePro
         }
     }
 
+    params {
+        param("env.JAVA_HOME", LINUX.buildJavaHome())
+    }
+
     val baseBuildType = this
     val buildScanTags = model.buildScanTags + stage.id
 
