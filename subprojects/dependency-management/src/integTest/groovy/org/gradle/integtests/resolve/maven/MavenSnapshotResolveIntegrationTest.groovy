@@ -901,7 +901,11 @@ task retrieve(type: Sync) {
 """
 
         when:
-        expectModuleServed(projectA)
+        projectA.pom.expectGet()
+        if (isGradleMetadataPublished()) {
+            projectA.moduleMetadata.expectGet()
+        }
+        projectA.artifact.expectGet()
 
         and:
         run 'retrieve'

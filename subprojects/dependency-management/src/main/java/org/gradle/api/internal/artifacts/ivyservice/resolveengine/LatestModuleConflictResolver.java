@@ -18,7 +18,6 @@ package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionComparator;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.internal.component.model.ComponentResolveMetadata;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,12 +29,10 @@ import java.util.Map;
 class LatestModuleConflictResolver<T extends ComponentResolutionState> implements ModuleConflictResolver<T> {
     private final Comparator<Version> versionComparator;
     private final VersionParser versionParser;
-    private final boolean releaseBias;
 
-    LatestModuleConflictResolver(VersionComparator versionComparator, VersionParser versionParser, boolean releaseBias) {
+    LatestModuleConflictResolver(VersionComparator versionComparator, VersionParser versionParser) {
         this.versionComparator = versionComparator.asVersionComparator();
         this.versionParser = versionParser;
-        this.releaseBias = releaseBias;
     }
 
     @Override
@@ -67,13 +64,6 @@ class LatestModuleConflictResolver<T extends ComponentResolutionState> implement
             if (!version.isQualified()) {
                 details.select(component);
                 return;
-            }
-            if (releaseBias) {
-                ComponentResolveMetadata metaData = component.getMetadata();
-                if (metaData != null && "release".equals(metaData.getStatus())) {
-                    details.select(component);
-                    return;
-                }
             }
         }
 
