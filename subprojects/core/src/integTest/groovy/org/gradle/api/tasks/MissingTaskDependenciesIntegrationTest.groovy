@@ -58,9 +58,9 @@ class MissingTaskDependenciesIntegrationTest extends AbstractIntegrationSpec {
 
         where:
         description            | producerOutput     | producedLocation           | consumedLocation
-        "same location"        | "file(outputFile)" | "output.txt"               | "output.txt"
+//        "same location"        | "file(outputFile)" | "output.txt"               | "output.txt"
         "consuming ancestor"   | "file(outputFile)" | "build/dir/sub/output.txt" | "build/dir"
-        "consuming descendant" | "dir('build/dir')" | "build/dir/sub/output.txt" | "build/dir/sub/output.txt"
+//        "consuming descendant" | "dir('build/dir')" | "build/dir/sub/output.txt" | "build/dir/sub/output.txt"
     }
 
     def "does not detect missing dependency when consuming the sibling of the output of the producer"() {
@@ -185,5 +185,37 @@ class MissingTaskDependenciesIntegrationTest extends AbstractIntegrationSpec {
         expect:
         executer.expectDocumentedDeprecationWarning(DEPRECATION_WARNING)
         succeeds("producer", "consumer")
+    }
+
+    def "can have tasks which consume a filtered project directory"() {
+        file("src/main/java/MyClass.java").createFile()
+        buildFile << """
+            task firstTask {
+                def outputFile = file("build/output1.txt")
+                outputs.file(outputFile)
+                doLast {
+                    outputFile.text = "first"
+                }
+            }
+            task lastTask {
+                def outputFile = file("build/output2.txt")
+                outputs.file(outputFile)
+                doLast {
+                    outputFile.text = "last"
+                }
+            }
+            task packageProjectDir(type: Zip) {
+                from(project.projectDir) {
+                    include 'src/**'
+                }
+                destinationDirectory = file("build")
+                archiveBaseName = "output3"
+            }
+        """
+
+        when:
+        run("firstTask", "packageProjectDir", "lastTask")
+        then:
+        executedAndNotSkipped(":firstTask", ":packageProjectDir", ":lastTask")
     }
 }

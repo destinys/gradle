@@ -32,6 +32,7 @@ import org.gradle.internal.reflect.TypeValidationContext;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class LocalTaskNodeExecutor implements NodeExecutor {
@@ -77,6 +78,7 @@ public class LocalTaskNodeExecutor implements NodeExecutor {
                 .forEach(consumerWithoutDependency -> collectValidationProblem(node, consumerWithoutDependency, validationContext));
         }
         Set<String> locationsConsumedByThisTask = new LinkedHashSet<>();
+        Set<FilteredTree> filteredFileTreesConsumedByThisTask = new LinkedHashSet<>();
         node.getTaskProperties().getInputFileProperties()
             .forEach(spec -> spec.getPropertyFiles().visitStructure(new FileCollectionStructureVisitor() {
                 @Override
@@ -91,7 +93,11 @@ public class LocalTaskNodeExecutor implements NodeExecutor {
 
                 @Override
                 public void visitFileTree(File root, PatternSet patterns, FileTreeInternal fileTree) {
-                    locationsConsumedByThisTask.add(root.getAbsolutePath());
+                    if (patterns.isEmpty()) {
+                        locationsConsumedByThisTask.add(root.getAbsolutePath());
+                    } else {
+                        filteredFileTreesConsumedByThisTask.add(new FilteredTree(root.getAbsolutePath(), patterns));
+                    }
                 }
 
                 @Override
@@ -102,6 +108,11 @@ public class LocalTaskNodeExecutor implements NodeExecutor {
         consumedLocations.recordRelatedToNode(node, locationsConsumedByThisTask);
         for (String locationConsumedByThisTask : locationsConsumedByThisTask) {
             producedLocations.getNodesRelatedTo(locationConsumedByThisTask).stream()
+                .filter(producerNode -> missesDependency(producerNode, node))
+                .forEach(producerWithoutDependency -> collectValidationProblem(producerWithoutDependency, node, validationContext));
+        }
+        for (FilteredTree filteredFileTreeConsumedByThisTask : filteredFileTreesConsumedByThisTask) {
+            producedLocations.getNodesRelatedTo(filteredFileTreeConsumedByThisTask.getRoot(), filteredFileTreeConsumedByThisTask.getPatterns().getAsSpec()).stream()
                 .filter(producerNode -> missesDependency(producerNode, node))
                 .forEach(producerWithoutDependency -> collectValidationProblem(producerWithoutDependency, node, validationContext));
         }
@@ -135,5 +146,41 @@ public class LocalTaskNodeExecutor implements NodeExecutor {
             severity,
             String.format("%s consumes the output of %s, but does not declare a dependency", consumer, producer)
         );
+    }
+
+    private static class FilteredTree {
+        private final String root;
+        private final PatternSet patterns;
+
+        private FilteredTree(String root, PatternSet patterns) {
+            this.root = root;
+            this.patterns = patterns;
+        }
+
+        public String getRoot() {
+            return root;
+        }
+
+        public PatternSet getPatterns() {
+            return patterns;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            FilteredTree that = (FilteredTree) o;
+            return root.equals(that.root) && patterns.equals(that.patterns);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(root, patterns);
+        }
+
     }
 }
