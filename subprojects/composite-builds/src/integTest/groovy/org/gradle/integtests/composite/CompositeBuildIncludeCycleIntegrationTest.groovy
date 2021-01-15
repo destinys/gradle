@@ -163,6 +163,7 @@ class CompositeBuildIncludeCycleIntegrationTest extends AbstractCompositeBuildIn
                 }
             """
             settingsFile << """
+                includeBuild '.'
                 includeBuild '../buildA'
             """
         }
@@ -195,6 +196,7 @@ class CompositeBuildIncludeCycleIntegrationTest extends AbstractCompositeBuildIn
                 }
             """
             settingsFile << """
+                includeBuild '.'
                 includeBuild '../buildA'
                 includeBuild '../buildB'
             """
