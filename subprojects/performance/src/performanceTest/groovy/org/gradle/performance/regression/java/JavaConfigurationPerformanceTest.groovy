@@ -20,18 +20,18 @@ import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject", "largeJavaMultiProjectKotlinDsl"])
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject", "largeJavaMultiProjectKotlinDsl"])
 )
 class JavaConfigurationPerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def "configure"() {
         given:
         runner.tasksToRun = ['help']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
 
         when:
         def result = runner.run()

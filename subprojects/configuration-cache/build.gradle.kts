@@ -1,37 +1,31 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("gradlebuild.distribution.implementation-kotlin")
     id("gradlebuild.kotlin-dsl-sam-with-receiver")
 }
 
-tasks {
-    withType<KotlinCompile>().configureEach {
-        kotlinOptions {
-            freeCompilerArgs += listOf(
-                "-XXLanguage:+NewInference",
-                "-XXLanguage:+SamConversionForKotlinFunctions"
-            )
-        }
-    }
-
-    processResources {
-        from({ project(":configuration-cache-report").tasks.named("assembleReport") }) {
-            into("org/gradle/configurationcache")
-        }
-    }
-
-    configCacheIntegTest {
-        enabled = false
-    }
+val configurationCacheReportPath by configurations.creating {
+    isVisible = false
+    isCanBeConsumed = false
+    attributes { attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named("configuration-cache-report")) }
 }
 
-afterEvaluate {
-    // This is a workaround for the validate plugins task trying to inspect classes which have changed but are NOT tasks.
-    // For the current project, we simply disable it since there are no tasks in there.
-    tasks.withType<ValidatePlugins>().configureEach {
-        enabled = false
-    }
+dependencies {
+    configurationCacheReportPath(project(":configuration-cache-report"))
+}
+
+tasks.processResources {
+    from(configurationCacheReportPath) { into("org/gradle/configurationcache") }
+}
+
+// The integration tests in this project do not need to run in 'config cache' mode.
+tasks.configCacheIntegTest {
+    enabled = false
+}
+
+// This is a workaround for the validate plugins task trying to inspect classes which have changed but are NOT tasks.
+// For the current project, we simply disable it since there are no tasks in there.
+tasks.withType<ValidatePlugins>().configureEach {
+    enabled = false
 }
 
 dependencies {
@@ -44,6 +38,7 @@ dependencies {
     implementation(project(":execution"))
     implementation(project(":file-collections"))
     implementation(project(":file-watching"))
+    implementation(project(":launcher"))
     implementation(project(":logging"))
     implementation(project(":messaging"))
     implementation(project(":model-core"))
@@ -100,5 +95,5 @@ dependencies {
 }
 
 classycle {
-    excludePatterns.set(listOf("org/gradle/configurationcache/**"))
+    excludePatterns.add("org/gradle/configurationcache/**")
 }

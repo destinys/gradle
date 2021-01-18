@@ -20,7 +20,7 @@ import org.gradle.integtests.fixtures.AbstractIntegrationSpec
 
 class NamedDomainObjectCollectionSchemaIntegrationTest extends AbstractIntegrationSpec {
     def setup() {
-        buildFile << """
+        buildFile """
             def extractSchema(container) {
                 return container.collectionSchema.elements.collectEntries { e ->
                     [ e.name, e.publicType.simpleName ]
@@ -35,7 +35,7 @@ class NamedDomainObjectCollectionSchemaIntegrationTest extends AbstractIntegrati
     }
 
     def "collection schema from project.container is public type"() {
-        buildFile << """
+        buildFile """
             interface PubType {}
             class Impl implements PubType, Named {
                 String name
@@ -45,11 +45,11 @@ class NamedDomainObjectCollectionSchemaIntegrationTest extends AbstractIntegrati
             }
             def factory = { name -> new Impl(name) }
             def testContainer = project.container(PubType, factory)
-            
+
             testContainer.create("foo")
             testContainer.register("bar")
             testContainer.register("baz").get()
-            
+
             task assertSchema {
                 doLast {
                     assertSchemaIs(testContainer,
@@ -65,45 +65,41 @@ class NamedDomainObjectCollectionSchemaIntegrationTest extends AbstractIntegrati
     }
 
     def "built-in container types presents public type in schema"() {
-        buildFile << """
+        buildFile """
             apply plugin: 'java'
-            
+
             repositories {
                 maven {}
                 ivy {}
             }
-            
+
             task assertSchema {
                 doLast {
-                    assertSchemaIs(sourceSets, 
+                    assertSchemaIs(sourceSets,
                         "main": "SourceSet",
                         "test": "SourceSet"
                     )
-                    assertSchemaIs(repositories, 
+                    assertSchemaIs(repositories,
                         // TODO: These should be more specific eventually
                         "maven": "ArtifactRepository",
                         "ivy": "ArtifactRepository"
                     )
-                    assertSchemaIs(configurations, 
-                        'annotationProcessor':'Configuration', 
-                        'apiElements':'Configuration', 
-                        'archives':'Configuration', 
-                        'compile':'Configuration', 
-                        'compileClasspath':'Configuration', 
-                        'compileOnly':'Configuration', 
-                        'default':'Configuration', 
-                        'implementation':'Configuration', 
-                        'runtime':'Configuration', 
-                        'runtimeClasspath':'Configuration', 
-                        'runtimeElements':'Configuration', 
-                        'runtimeOnly':'Configuration', 
-                        'testAnnotationProcessor':'Configuration', 
-                        'testCompile':'Configuration', 
-                        'testCompileClasspath':'Configuration', 
-                        'testCompileOnly':'Configuration', 
-                        'testImplementation':'Configuration', 
-                        'testRuntime':'Configuration', 
-                        'testRuntimeClasspath':'Configuration', 
+                    assertSchemaIs(configurations,
+                        'annotationProcessor':'Configuration',
+                        'apiElements':'Configuration',
+                        'archives':'Configuration',
+                        'compileClasspath':'Configuration',
+                        'compileOnly':'Configuration',
+                        'default':'Configuration',
+                        'implementation':'Configuration',
+                        'runtimeClasspath':'Configuration',
+                        'runtimeElements':'Configuration',
+                        'runtimeOnly':'Configuration',
+                        'testAnnotationProcessor':'Configuration',
+                        'testCompileClasspath':'Configuration',
+                        'testCompileOnly':'Configuration',
+                        'testImplementation':'Configuration',
+                        'testRuntimeClasspath':'Configuration',
                         'testRuntimeOnly':'Configuration'
                     )
                 }

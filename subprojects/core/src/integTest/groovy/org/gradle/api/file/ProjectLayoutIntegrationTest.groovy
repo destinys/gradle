@@ -24,7 +24,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
     private static final String STRING_CALLABLE = 'new java.util.concurrent.Callable<String>() { String call() { return "src/resource/file.txt" } }'
 
     def "can access the project dir and build dir"() {
-        buildFile << """
+        buildFile """
             println "project dir: " + layout.projectDirectory.asFile
             def b = layout.buildDirectory
             println "build dir: " + b.get()
@@ -42,7 +42,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
     }
 
     def "can apply convention to build dir"() {
-        buildFile << """
+        buildFile """
             println "build dir: " + project.buildDir
             layout.buildDirectory.convention(layout.projectDirectory.dir("out"))
             println "build dir 2: " + project.buildDir
@@ -63,7 +63,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
     }
 
     def "layout is available for injection"() {
-        buildFile << """
+        buildFile """
             class SomeTask extends DefaultTask {
                 @Inject
                 ProjectLayout getLayout() { null }
@@ -97,7 +97,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
     }
 
     def "can define and resolve calculated directory relative to project and build directory"() {
-        buildFile << """
+        buildFile """
             def childDirName = "child"
             def srcDir = layout.projectDir.dir("src").dir(providers.provider { childDirName })
             def outputDir = layout.buildDirectory.dir(providers.provider { childDirName })
@@ -120,7 +120,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
     }
 
     def "can define and resolve calculated file relative to project and build directory"() {
-        buildFile << """
+        buildFile """
             def childDirName = "child"
             def srcFile = layout.projectDir.dir("src").file(providers.provider { childDirName })
             def outputFile = layout.buildDirectory.file(providers.provider { childDirName })
@@ -197,7 +197,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         when:
-        maybeDeprecated(expression)
         run()
 
         then:
@@ -206,7 +205,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         where:
         collectionType               | expression
         'FileCollection'             | 'project.layout.files()'
-        'ConfigurableFileCollection' | 'project.layout.configurableFiles()'
     }
 
     @Unroll
@@ -220,7 +218,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         when:
-        maybeDeprecated(expression)
         run()
 
         then:
@@ -242,21 +239,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         'FileCollection'             | 'Callable'       | "project.layout.files($STRING_CALLABLE)"
         'FileCollection'             | 'Provider'       | "project.layout.files(provider($STRING_CALLABLE))"
         'FileCollection'             | 'nested objects' | "project.layout.files({[{$STRING_CALLABLE}]})"
-
-        'ConfigurableFileCollection' | 'String'         | 'project.layout.configurableFiles("src/resource/file.txt")'
-        'ConfigurableFileCollection' | 'File'           | 'project.layout.configurableFiles(new File("src/resource/file.txt"))'
-        'ConfigurableFileCollection' | 'Path'           | 'project.layout.configurableFiles(java.nio.file.Paths.get("src/resource/file.txt"))'
-        'ConfigurableFileCollection' | 'URI'            | 'project.layout.configurableFiles(new File(projectDir, "/src/resource/file.txt").toURI())'
-        'ConfigurableFileCollection' | 'URL'            | 'project.layout.configurableFiles(new File(projectDir, "/src/resource/file.txt").toURI().toURL())'
-        'ConfigurableFileCollection' | 'Directory'      | 'project.layout.configurableFiles(project.layout.projectDirectory)'
-        'ConfigurableFileCollection' | 'RegularFile'    | 'project.layout.configurableFiles(project.layout.projectDirectory.file("src/resource/file.txt"))'
-        'ConfigurableFileCollection' | 'Closure'        | 'project.layout.configurableFiles({ "src/resource/file.txt" })'
-        'ConfigurableFileCollection' | 'List'           | 'project.layout.configurableFiles([ "src/resource/file.txt" ])'
-        'ConfigurableFileCollection' | 'array'          | 'project.layout.configurableFiles([ "src/resource/file.txt" ] as Object[])'
-        'ConfigurableFileCollection' | 'FileCollection' | "project.layout.configurableFiles(project.layout.files('src/resource/file.txt'))"
-        'ConfigurableFileCollection' | 'Callable'       | "project.layout.configurableFiles($STRING_CALLABLE)"
-        'ConfigurableFileCollection' | 'Provider'       | "project.layout.configurableFiles(provider($STRING_CALLABLE))"
-        'ConfigurableFileCollection' | 'nested objects' | "project.layout.configurableFiles({[{$STRING_CALLABLE}]})"
     }
 
     @Unroll
@@ -275,7 +257,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         when:
-        maybeDeprecated(expression)
         run('myTask')
 
         then:
@@ -285,12 +266,10 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         collectionType               | dependencyType | expression
         'FileCollection'             | 'Task'         | 'project.layout.files(project.tasks.myTask)'
         'FileCollection'             | 'TaskOutputs'  | 'project.layout.files(project.tasks.myTask.outputs)'
-        'ConfigurableFileCollection' | 'Task'         | 'project.layout.configurableFiles(project.tasks.myTask)'
-        'ConfigurableFileCollection' | 'TaskOutputs'  | 'project.layout.configurableFiles(project.tasks.myTask.outputs)'
     }
 
     @Unroll
-    def '#methodName enforces build dependencies when given Task as input'() {
+    def '#expression enforces build dependencies when given Task as input'() {
         buildFile << """
             task producer {
                 def outputFile = file('build/resource/file.txt')
@@ -310,7 +289,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         when:
-        maybeDeprecated(expression)
         run('consumer')
 
         then:
@@ -318,7 +296,7 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         outputContains("files = [${testDirectory.file('/build/resource/file.txt').absolutePath}]")
 
         where:
-        expression << ['project.layout.files', 'project.layout.configurableFiles']
+        expression << ['project.layout.files']
     }
 
     @Unroll
@@ -338,7 +316,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         when:
-        maybeDeprecated(expression)
         run()
 
         then:
@@ -347,7 +324,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         where:
         collectionType               | expression
         'FileCollection'             | 'project.layout.files(configurations.other)'
-        'ConfigurableFileCollection' | 'project.layout.configurableFiles(configurations.other)'
     }
 
     @Unroll
@@ -358,7 +334,6 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         """
 
         expect:
-        maybeDeprecated(expression)
         fails('help')
         errorOutput.contains('java.lang.NullPointerException')
 
@@ -366,14 +341,5 @@ class ProjectLayoutIntegrationTest extends AbstractIntegrationSpec {
         collectionType               | expression
         'FileCollection (Object...)' | 'project.layout.files((Object) null)'
         'FileCollection (File...)'   | 'project.layout.files((File) null)'
-        'ConfigurableFileCollection' | 'project.layout.configurableFiles(null)'
-    }
-
-    void maybeDeprecated(String expression) {
-        if (expression.contains("configurableFiles")) {
-            executer.expectDocumentedDeprecationWarning("The ProjectLayout.configurableFiles() method has been deprecated. This is scheduled to be removed in Gradle 7.0. " +
-                "Please use the ObjectFactory.fileCollection() method instead. " +
-                "See https://docs.gradle.org/current/userguide/lazy_configuration.html#property_files_api_reference for more details.")
-        }
     }
 }

@@ -432,15 +432,24 @@ class ArtifactTransformParallelIntegrationTest extends AbstractDependencyResolut
                     dependencies {
                         compile '${lib.groupId}:${lib.artifactId}:${lib.version}'
                     }
+
+                    task beforeResolve {
+                        def projectName = project.name
+                        doLast {
+                            ${server.callFromBuildUsingExpression('"resolveStarted_" + projectName')}
+                        }
+                    }
+
                     task resolve {
                         def artifacts = configurations.compile.incoming.artifactView {
                             attributes { it.attribute(artifactType, 'size') }
                         }.artifacts
                         inputs.files(artifacts.artifactFiles)
 
+                        dependsOn(beforeResolve)
+
                         def projectName = project.name
                         doLast {
-                            ${server.callFromBuildUsingExpression('"resolveStarted_" + projectName')}
                             assert artifacts.artifactFiles.collect { it.name } == [projectName + '-1.0.jar.txt']
                         }
                     }

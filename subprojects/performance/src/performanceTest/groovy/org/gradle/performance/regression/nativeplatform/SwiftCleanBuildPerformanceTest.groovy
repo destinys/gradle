@@ -19,18 +19,20 @@ package org.gradle.performance.regression.nativeplatform
 import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
+import spock.lang.Ignore
 
-import static org.gradle.performance.annotations.ScenarioType.SLOW
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
+@Ignore
 @RunFor(
-    @Scenario(type = SLOW, operatingSystems = [LINUX], testProjects = ['mediumSwiftMulti', 'bigSwiftApp'])
+    @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ['mediumSwiftMulti', 'bigSwiftApp'])
 )
 class SwiftCleanBuildPerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def setup() {
         runner.minimumBaseVersion = '4.6'
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
     }
 
     def "clean assemble (swift)"() {

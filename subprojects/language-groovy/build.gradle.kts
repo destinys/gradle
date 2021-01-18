@@ -8,6 +8,7 @@ dependencies {
     implementation(project(":process-services"))
     implementation(project(":worker-processes"))
     implementation(project(":file-collections"))
+    implementation(project(":file-temp"))
     implementation(project(":core-api"))
     implementation(project(":model-core"))
     implementation(project(":core"))
@@ -43,8 +44,6 @@ dependencies {
 }
 
 classycle {
-    excludePatterns.set(listOf(
-        "org/gradle/api/internal/tasks/compile/**",
-        "org/gradle/api/tasks/javadoc/**"
-    ))
+    excludePatterns.add("org/gradle/api/internal/tasks/compile/**")
+    excludePatterns.add("org/gradle/api/tasks/javadoc/**")
 }

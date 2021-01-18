@@ -29,9 +29,9 @@ import org.gradle.internal.execution.caching.CachingDisabledReason
 import org.gradle.internal.execution.history.OutputFilesRepository
 import org.gradle.internal.execution.history.OverlappingOutputs
 import org.gradle.internal.execution.history.changes.DefaultExecutionStateChangeDetector
-import org.gradle.internal.execution.history.changes.InputChangesInternal
 import org.gradle.internal.execution.history.impl.DefaultOverlappingOutputDetector
 import org.gradle.internal.execution.impl.DefaultExecutionEngine
+import org.gradle.internal.execution.impl.DefaultInputFingerprinter
 import org.gradle.internal.execution.steps.AssignWorkspaceStep
 import org.gradle.internal.execution.steps.BroadcastChangingOutputsStep
 import org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep
@@ -79,6 +79,7 @@ import static org.gradle.internal.execution.ExecutionOutcome.UP_TO_DATE
 import static org.gradle.internal.execution.UnitOfWork.IdentityKind.NON_IDENTITY
 import static org.gradle.internal.execution.UnitOfWork.InputPropertyType.NON_INCREMENTAL
 import static org.gradle.internal.reflect.TypeValidationContext.Severity.ERROR
+import static org.gradle.internal.reflect.TypeValidationContext.Severity.WARNING
 
 class IncrementalExecutionIntegrationTest extends Specification {
 
@@ -109,9 +110,10 @@ class IncrementalExecutionIntegrationTest extends Specification {
     }
     def outputSnapshotter = new DefaultOutputSnapshotter(snapshotter)
     def valueSnapshotter = new DefaultValueSnapshotter(classloaderHierarchyHasher, null)
+    def inputFingerprinter = new DefaultInputFingerprinter(valueSnapshotter)
     def buildCacheController = Mock(BuildCacheController)
     def buildOperationExecutor = new TestBuildOperationExecutor()
-    def validationWarningReporter = Mock(ValidateStep.ValidationWarningReporter)
+    def validationWarningReporter = Mock(ValidateStep.ValidationWarningRecorder)
 
     final outputFile = temporaryFolder.file("output-file")
     final outputDir = temporaryFolder.file("output-dir")
@@ -138,12 +140,12 @@ class IncrementalExecutionIntegrationTest extends Specification {
     ExecutionEngine getExecutor() {
         // @formatter:off
         new DefaultExecutionEngine(
-            new IdentifyStep<>(valueSnapshotter,
+            new IdentifyStep<>(inputFingerprinter,
             new IdentityCacheStep<>(
             new AssignWorkspaceStep<>(
             new LoadExecutionStateStep<>(
-            new ValidateStep<>(validationWarningReporter,
-            new CaptureStateBeforeExecutionStep<>(buildOperationExecutor, classloaderHierarchyHasher, outputSnapshotter, overlappingOutputDetector, valueSnapshotter,
+            new ValidateStep<>(virtualFileSystem, validationWarningReporter,
+            new CaptureStateBeforeExecutionStep<>(buildOperationExecutor, classloaderHierarchyHasher, inputFingerprinter, outputSnapshotter, overlappingOutputDetector,
             new ResolveCachingStateStep<>(buildCacheController, false,
             new ResolveChangesStep<>(changeDetector,
             new SkipUpToDateStep<>(
@@ -268,6 +270,25 @@ class IncrementalExecutionIntegrationTest extends Specification {
         result.executionResult.get().outcome == EXECUTED_NON_INCREMENTALLY
         !result.reusedOutputOriginMetadata.present
         result.executionReasons == ["No history is available."]
+    }
+
+    def "out of date when work fails validation"() {
+        given:
+        execute(unitOfWork)
+
+        def invalidWork = builder
+            .withValidator {context -> context
+                .forType(UnitOfWork, false)
+                .visitPropertyProblem(WARNING, "Validation problem")
+            }
+            .build()
+        when:
+        def result = execute(invalidWork)
+
+        then:
+        result.executionResult.get().outcome == EXECUTED_NON_INCREMENTALLY
+        !result.reusedOutputOriginMetadata.present
+        result.executionReasons == ["Validation failed."]
     }
 
     def "out of date when output file removed"() {
@@ -560,7 +581,7 @@ class IncrementalExecutionIntegrationTest extends Specification {
     def "invalid work is not executed"() {
         def invalidWork = builder
             .withValidator { validationContext ->
-                validationContext.createContextFor(Object, true).visitTypeProblem(ERROR, Object, "Validation error")
+                validationContext.forType(Object, true).visitTypeProblem(ERROR, Object, "Validation error")
             }
             .withWork({ throw new RuntimeException("Should not get executed") })
             .build()
@@ -630,11 +651,11 @@ class IncrementalExecutionIntegrationTest extends Specification {
         }
     }
 
-    UpToDateResult outOfDate(UnitOfWork unitOfWork, String... expectedReasons) {
+    ExecutionEngine.Result outOfDate(UnitOfWork unitOfWork, String... expectedReasons) {
         return outOfDate(unitOfWork, ImmutableList.<String>copyOf(expectedReasons))
     }
 
-    UpToDateResult outOfDate(UnitOfWork unitOfWork, List<String> expectedReasons) {
+    ExecutionEngine.Result outOfDate(UnitOfWork unitOfWork, List<String> expectedReasons) {
         def result = execute(unitOfWork)
         assert result.executionResult.get().outcome == EXECUTED_NON_INCREMENTALLY
         !result.reusedOutputOriginMetadata.present
@@ -642,31 +663,33 @@ class IncrementalExecutionIntegrationTest extends Specification {
         return result
     }
 
-    UpToDateResult upToDate(UnitOfWork unitOfWork) {
+    ExecutionEngine.Result upToDate(UnitOfWork unitOfWork) {
         def result = execute(unitOfWork)
         assert result.executionResult.get().outcome == UP_TO_DATE
         return result
     }
 
-    UpToDateResult execute(UnitOfWork unitOfWork) {
+    ExecutionEngine.Result execute(UnitOfWork unitOfWork) {
         virtualFileSystem.invalidateAll()
-        executor.execute(unitOfWork)
+        executor.createRequest(unitOfWork).execute()
     }
 
     String executeDeferred(UnitOfWork unitOfWork, Cache<UnitOfWork.Identity, Try<Object>> cache) {
         virtualFileSystem.invalidateAll()
-        executor.getFromIdentityCacheOrDeferExecution(unitOfWork, cache, new DeferredExecutionHandler<Object, String>() {
-            @Override
-            String processCachedOutput(Try<Object> cachedResult) {
-                return "cached"
-            }
+        executor.createRequest(unitOfWork)
+            .withIdentityCache(cache)
+            .getOrDeferExecution(new DeferredExecutionHandler<Object, String>() {
+                @Override
+                String processCachedOutput(Try<Object> cachedResult) {
+                    return "cached"
+                }
 
-            @Override
-            String processDeferredOutput(Supplier<Try<Object>> deferredExecution) {
-                deferredExecution.get()
-                return "deferred"
-            }
-        })
+                @Override
+                String processDeferredOutput(Supplier<Try<Object>> deferredExecution) {
+                    deferredExecution.get()
+                    return "deferred"
+                }
+            })
     }
 
     private TestFile file(Object... path) {
@@ -708,7 +731,7 @@ class IncrementalExecutionIntegrationTest extends Specification {
         private Map<String, ? extends File> outputDirs = IncrementalExecutionIntegrationTest.this.outputDirs
         private Collection<? extends TestFile> create = createFiles
         private ImplementationSnapshot implementation = ImplementationSnapshot.of(UnitOfWork.name, HashCode.fromInt(1234))
-        private Consumer<UnitOfWork.WorkValidationContext> validator
+        private Consumer<WorkValidationContext> validator
 
         UnitOfWorkBuilder withWork(Supplier<UnitOfWork.WorkResult> closure) {
             work = closure
@@ -769,7 +792,7 @@ class IncrementalExecutionIntegrationTest extends Specification {
             return this
         }
 
-        UnitOfWorkBuilder withValidator(Consumer<UnitOfWork.WorkValidationContext> validator) {
+        UnitOfWorkBuilder withValidator(Consumer<WorkValidationContext> validator) {
             this.validator = validator
             return this
         }
@@ -804,7 +827,7 @@ class IncrementalExecutionIntegrationTest extends Specification {
                 }
 
                 @Override
-                UnitOfWork.WorkOutput execute(@Nullable InputChangesInternal inputChanges, InputChangesContext context) {
+                UnitOfWork.WorkOutput execute(UnitOfWork.ExecutionRequest executionRequest) {
                     def didWork = work.get()
                     executed = true
                     return new UnitOfWork.WorkOutput() {
@@ -859,7 +882,7 @@ class IncrementalExecutionIntegrationTest extends Specification {
                 }
 
                 @Override
-                void validate(UnitOfWork.WorkValidationContext validationContext) {
+                void validate(WorkValidationContext validationContext) {
                     validator?.accept(validationContext)
                 }
 

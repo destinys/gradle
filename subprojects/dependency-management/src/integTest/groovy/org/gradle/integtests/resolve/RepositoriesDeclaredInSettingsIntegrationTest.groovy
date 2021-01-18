@@ -220,8 +220,12 @@ class RepositoriesDeclaredInSettingsIntegrationTest extends AbstractModuleDepend
             'org:module:1.0'()
         }
 
-        settingsFile << """
-            includeBuild 'my-plugin'
+        settingsFile.text = """
+            pluginManagement {
+                includeBuild 'my-plugin'
+            }
+
+            $settingsFile.text
 
             dependencyResolutionManagement {
                 repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -737,7 +741,7 @@ class RepositoriesDeclaredInSettingsIntegrationTest extends AbstractModuleDepend
     }
 
     @Issue("https://github.com/gradle/gradle/issues/15336")
-    @ToBeFixedForConfigurationCache(because = "Decorated exception is not rethrown")
+    @ToBeFixedForConfigurationCache(because = "Decorated exception is not recognized by the configuration cache")
     def "reasonable error message if a dependency cannot be resolved because local repositories differ"() {
         buildFile << """
             repositories {
@@ -756,10 +760,10 @@ class RepositoriesDeclaredInSettingsIntegrationTest extends AbstractModuleDepend
         fails ':checkDeps'
 
         then:
-        failure.assertThatCause(containsNormalizedString("""Could not resolve all dependencies for configuration ':conf'.
+        failure.assertHasCause("""Could not resolve all dependencies for configuration ':conf'.
 The project declares repositories, effectively ignoring the repositories you have declared in the settings.
 You can figure out how project repositories are declared by configuring your build to fail on project repositories.
-See https://docs.gradle.org/${GradleVersion.current().version}/userguide/declaring_repositories.html#sub:fail_build_on_project_repositories for details."""))
+See https://docs.gradle.org/${GradleVersion.current().version}/userguide/declaring_repositories.html#sub:fail_build_on_project_repositories for details.""")
     }
 
     void withSettingsPlugin() {

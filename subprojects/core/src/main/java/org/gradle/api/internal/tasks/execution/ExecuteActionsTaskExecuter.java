@@ -54,15 +54,14 @@ import org.gradle.internal.event.ListenerManager;
 import org.gradle.internal.exceptions.Contextual;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.internal.exceptions.MultiCauseException;
-import org.gradle.internal.execution.CachingResult;
 import org.gradle.internal.execution.ExecutionEngine;
+import org.gradle.internal.execution.ExecutionEngine.Result;
 import org.gradle.internal.execution.ExecutionOutcome;
-import org.gradle.internal.execution.InputChangesContext;
 import org.gradle.internal.execution.UnitOfWork;
+import org.gradle.internal.execution.WorkValidationContext;
 import org.gradle.internal.execution.WorkValidationException;
 import org.gradle.internal.execution.caching.CachingDisabledReason;
 import org.gradle.internal.execution.caching.CachingState;
-import org.gradle.internal.execution.history.AfterPreviousExecutionState;
 import org.gradle.internal.execution.history.ExecutionHistoryStore;
 import org.gradle.internal.execution.history.OverlappingOutputs;
 import org.gradle.internal.execution.history.changes.InputChangesInternal;
@@ -77,6 +76,7 @@ import org.gradle.internal.operations.BuildOperationDescriptor;
 import org.gradle.internal.operations.BuildOperationExecutor;
 import org.gradle.internal.operations.BuildOperationRef;
 import org.gradle.internal.operations.RunnableBuildOperation;
+import org.gradle.internal.reflect.TypeValidationContext;
 import org.gradle.internal.snapshot.FileSystemSnapshot;
 import org.gradle.internal.snapshot.SnapshotUtil;
 import org.gradle.internal.snapshot.ValueSnapshot;
@@ -178,9 +178,10 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
     }
 
     private TaskExecuterResult executeIfValid(TaskInternal task, TaskStateInternal state, TaskExecutionContext context, TaskExecution work) {
-        CachingResult result = context.getTaskExecutionMode().getRebuildReason()
-            .map(rebuildReason -> executionEngine.rebuild(work, rebuildReason))
-            .orElseGet(() -> executionEngine.execute(work));
+        ExecutionEngine.Request request = executionEngine.createRequest(work);
+        context.getTaskExecutionMode().getRebuildReason().ifPresent(request::forceRebuild);
+        request.withValidationContext(context.getValidationContext());
+        Result result = request.execute();
         result.getExecutionResult().ifSuccessfulOrElse(
             executionResult -> state.setOutcome(TaskExecutionOutcome.valueOf(executionResult.getOutcome())),
             failure -> state.setOutcome(new TaskExecutionException(task, failure))
@@ -222,7 +223,8 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
             TaskExecutionContext context,
             ExecutionHistoryStore executionHistoryStore,
             FileCollectionFingerprinterRegistry fingerprinterRegistry,
-            ClassLoaderHierarchyHasher classLoaderHierarchyHasher) {
+            ClassLoaderHierarchyHasher classLoaderHierarchyHasher
+        ) {
             this.task = task;
             this.context = context;
             this.executionHistoryStore = executionHistoryStore;
@@ -232,23 +234,18 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
 
         @Override
         public Identity identify(Map<String, ValueSnapshot> identityInputs, Map<String, CurrentFileCollectionFingerprint> identityFileInputs) {
-            return new Identity() {
-                @Override
-                public String getUniqueId() {
-                    return task.getPath();
-                }
-            };
+            return task::getPath;
         }
 
         @Override
-        public WorkOutput execute(@Nullable InputChangesInternal inputChanges, InputChangesContext context) {
-            FileCollection previousFiles = context.getAfterPreviousExecutionState()
-                .map(afterPreviousExecutionState -> (FileCollection) new PreviousOutputFileCollection(task, afterPreviousExecutionState))
+        public WorkOutput execute(ExecutionRequest executionRequest) {
+            FileCollection previousFiles = executionRequest.getPreviouslyProducedOutputs()
+                .<FileCollection>map(previousOutputs -> new PreviousOutputFileCollection(task, previousOutputs))
                 .orElseGet(fileCollectionFactory::empty);
             TaskOutputsInternal outputs = task.getOutputs();
             outputs.setPreviousOutputFiles(previousFiles);
             try {
-                WorkResult didWork = executeWithPreviousOutputFiles(inputChanges);
+                WorkResult didWork = executeWithPreviousOutputFiles(executionRequest.getInputChanges().orElse(null));
                 return new WorkOutput() {
                     @Override
                     public WorkResult getDidWork() {
@@ -287,7 +284,6 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
                         ? executionHistoryStore
                         : null);
                 }
-
             };
         }
 
@@ -428,11 +424,14 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
             Class<?> taskType = GeneratedSubclasses.unpackType(task);
             // TODO This should probably use the task class info store
             boolean cacheable = taskType.isAnnotationPresent(CacheableTask.class);
+            TypeValidationContext typeValidationContext = validationContext.forType(taskType, cacheable);
+            context.getTaskProperties().validateType(typeValidationContext);
             context.getTaskProperties().validate(new DefaultTaskValidationContext(
                 fileOperations,
                 reservedFileSystemLocationRegistry,
-                validationContext.createContextFor(taskType, cacheable)
+                typeValidationContext
             ));
+            context.getValidationAction().accept(typeValidationContext);
         }
 
         @Override
@@ -447,6 +446,11 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
         @Override
         public String getDisplayName() {
             return task.toString();
+        }
+
+        @Override
+        public String toString() {
+            return getDisplayName();
         }
     }
 
@@ -540,16 +544,16 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
 
     private class PreviousOutputFileCollection extends LazilyInitializedFileCollection {
         private final TaskInternal task;
-        private final AfterPreviousExecutionState previousExecution;
+        private final ImmutableSortedMap<String, FileSystemSnapshot> previousOutputs;
 
-        public PreviousOutputFileCollection(TaskInternal task, AfterPreviousExecutionState previousExecution) {
+        public PreviousOutputFileCollection(TaskInternal task, ImmutableSortedMap<String, FileSystemSnapshot> previousOutputs) {
             this.task = task;
-            this.previousExecution = previousExecution;
+            this.previousOutputs = previousOutputs;
         }
 
         @Override
         public FileCollectionInternal createDelegate() {
-            List<File> outputs = previousExecution.getOutputFilesProducedByWork().values().stream()
+            List<File> outputs = previousOutputs.values().stream()
                 .map(SnapshotUtil::index)
                 .map(Map::keySet)
                 .flatMap(Collection::stream)

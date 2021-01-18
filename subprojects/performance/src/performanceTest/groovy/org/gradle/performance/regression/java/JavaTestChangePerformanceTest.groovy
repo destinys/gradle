@@ -22,11 +22,11 @@ import org.gradle.performance.annotations.Scenario
 import org.gradle.performance.fixture.JavaTestProject
 import org.gradle.profiler.mutations.ApplyNonAbiChangeToJavaSourceFileMutator
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "mediumJavaMultiProjectWithTestNG", "largeMonolithicJavaProject"])
+    @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "mediumJavaMultiProjectWithTestNG", "largeMonolithicJavaProject"])
 )
 class JavaTestChangePerformanceTest extends AbstractCrossVersionPerformanceTest {
     def "test for non-abi change"() {
@@ -35,7 +35,7 @@ class JavaTestChangePerformanceTest extends AbstractCrossVersionPerformanceTest 
         runner.warmUpRuns = 2
         runner.runs = 6
         runner.tasksToRun = ['test']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
         // Pre-4.0 versions run into memory problems with this test
         runner.minimumBaseVersion = "4.0"
         runner.addBuildMutator { new ApplyNonAbiChangeToJavaSourceFileMutator(new File(it.projectDir, testProject.config.fileToChangeByScenario['test'])) }

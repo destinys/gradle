@@ -1,19 +1,5 @@
-/*
- * Copyright 2011 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-import gradlebuild.basics.util.ReproduciblePropertiesWriter
+import gradlebuild.basics.accessors.groovy
+import gradlebuild.integrationtests.tasks.GenerateLanguageAnnotations
 import java.util.Properties
 
 plugins {
@@ -71,6 +57,9 @@ dependencies {
     implementation(libs.jgit) {
         because("Some tests require a git reportitory - see AbstractIntegrationSpec.initGitDir(")
     }
+    implementation(libs.jetbrainsAnnotations) {
+        because("Generated language annotations for spock tests")
+    }
 
     // we depend on both: sshd platforms and libraries
     implementation(libs.sshdCore)
@@ -100,7 +89,7 @@ dependencies {
 }
 
 classycle {
-    excludePatterns.set(listOf("org/gradle/**"))
+    excludePatterns.add("org/gradle/**")
 }
 
 val prepareVersionsInfo = tasks.register<PrepareVersionsInfo>("prepareVersionsInfo") {
@@ -117,7 +106,14 @@ val copyAgpVersionsInfo by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated-resources/agp-versions"))
 }
 
+val generateLanguageAnnotations by tasks.registering(GenerateLanguageAnnotations::class) {
+    classpath.from(configurations.integTestDistributionRuntimeClasspath)
+    packageName.set("org.gradle.integtests.fixtures")
+    destDir.set(layout.buildDirectory.dir("generated/sources/language-annotations/groovy/main"))
+}
+
 sourceSets.main {
+    groovy.srcDir(generateLanguageAnnotations.flatMap { it.destDir })
     output.dir(prepareVersionsInfo.map { it.destFile.get().asFile.parentFile })
     output.dir(copyAgpVersionsInfo)
 }
@@ -143,6 +139,6 @@ abstract class PrepareVersionsInfo : DefaultTask() {
         properties["mostRecent"] = mostRecent.get()
         properties["mostRecentSnapshot"] = mostRecentSnapshot.get()
         properties["versions"] = versions.get()
-        ReproduciblePropertiesWriter.store(properties, destFile.get().asFile)
+        gradlebuild.basics.util.ReproduciblePropertiesWriter.store(properties, destFile.get().asFile)
     }
 }

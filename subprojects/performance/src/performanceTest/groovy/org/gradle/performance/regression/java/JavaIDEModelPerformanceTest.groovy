@@ -23,17 +23,17 @@ import org.gradle.tooling.model.ExternalDependency
 import org.gradle.tooling.model.eclipse.EclipseProject
 import org.gradle.tooling.model.idea.IdeaProject
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
 import static org.gradle.performance.generator.JavaTestProjectGenerator.LARGE_MONOLITHIC_JAVA_PROJECT
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject"])
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject"])
 )
 class JavaIDEModelPerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def setup() {
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["7.0-20210114230049+0000"]
         runner.minimumBaseVersion = "2.11"
     }
 
@@ -112,8 +112,8 @@ class JavaIDEModelPerformanceTest extends AbstractCrossVersionPerformanceTest {
                     it.compilerOutput.testOutputDir
                     it.contentRoots.each {
                         it.excludeDirectories
-                        withIdeaSources(it.generatedSourceDirectories)
-                        withIdeaSources(it.generatedTestDirectories)
+                        withIdeaSources(it.sourceDirectories.findAll { it.generated })
+                        withIdeaSources(it.testDirectories.findAll { it.generated })
                         withIdeaSources(it.sourceDirectories)
                         withIdeaSources(it.testDirectories)
                     }

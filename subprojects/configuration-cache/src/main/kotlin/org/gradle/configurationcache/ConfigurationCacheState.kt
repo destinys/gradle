@@ -53,9 +53,9 @@ import org.gradle.internal.build.BuildStateRegistry
 import org.gradle.internal.build.IncludedBuildState
 import org.gradle.internal.build.PublicBuildPath
 import org.gradle.internal.build.event.BuildEventListenerRegistryInternal
-import org.gradle.internal.cleanup.BuildOutputCleanupRegistry
 import org.gradle.internal.enterprise.core.GradleEnterprisePluginAdapter
 import org.gradle.internal.enterprise.core.GradleEnterprisePluginManager
+import org.gradle.internal.execution.BuildOutputCleanupRegistry
 import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.plugin.management.internal.PluginRequests
@@ -335,6 +335,7 @@ class ConfigurationCacheState(
             writeString(name!!)
             writeFile(buildRootDir)
             write(fromBuild)
+            writeBoolean(isPluginBuild())
         }
     }
 
@@ -343,13 +344,15 @@ class ConfigurationCacheState(
         val includedBuildName = readString()
         val includedBuildRootDir = readFile()
         val fromBuild = readNonNull<PublicBuildPath>()
+        val pluginBuild = readBoolean()
         return BuildDefinition.fromStartParameterForBuild(
             parentBuild.gradle.startParameter,
             includedBuildName,
             includedBuildRootDir,
             PluginRequests.EMPTY,
             Actions.doNothing(),
-            fromBuild
+            fromBuild,
+            pluginBuild
         )
     }
 

@@ -21,17 +21,17 @@ import org.gradle.performance.WithExternalRepository
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["excludeRuleMergingBuild"])
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["excludeRuleMergingBuild"])
 )
 class ExcludeRuleMergingPerformanceTest extends AbstractCrossVersionPerformanceTest implements WithExternalRepository {
 
     def setup() {
-        runner.minimumBaseVersion = '4.9'
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.minimumBaseVersion = '5.6.4'
+        runner.targetVersions = ["7.0-20201215144843+0000"]
     }
 
     def "merge exclude rules"() {

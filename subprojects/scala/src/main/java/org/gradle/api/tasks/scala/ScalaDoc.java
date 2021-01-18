@@ -15,7 +15,6 @@
  */
 package org.gradle.api.tasks.scala;
 
-import org.gradle.api.Incubating;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.internal.project.IsolatedAntBuilder;
@@ -33,6 +32,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceTask;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.scala.internal.GenerateScaladoc;
+import org.gradle.internal.file.TempFiles;
 import org.gradle.util.GUtil;
 import org.gradle.workers.WorkQueue;
 import org.gradle.workers.WorkerExecutor;
@@ -40,11 +40,11 @@ import org.gradle.workers.WorkerExecutor;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
  * Generates HTML API documentation for Scala source files.
- *
  */
 @CacheableTask
 public class ScalaDoc extends SourceTask {
@@ -138,7 +138,9 @@ public class ScalaDoc extends SourceTask {
     /**
      * Returns the documentation title.
      */
-    @Nullable @Optional @Input
+    @Nullable
+    @Optional
+    @Input
     public String getTitle() {
         return title;
     }
@@ -153,7 +155,6 @@ public class ScalaDoc extends SourceTask {
      *
      * @since 6.5
      */
-    @Incubating
     @Internal
     public Property<String> getMaxMemory() {
         return maxMemory;
@@ -168,11 +169,14 @@ public class ScalaDoc extends SourceTask {
 
         WorkQueue queue = getWorkerExecutor().processIsolation(worker -> {
             worker.getClasspath().from(getScalaClasspath());
-            if(getMaxMemory().isPresent()) {
+            if (getMaxMemory().isPresent()) {
                 worker.forkOptions(forkOptions -> forkOptions.setMaxHeapSize(getMaxMemory().get()));
             }
         });
         queue.submit(GenerateScaladoc.class, parameters -> {
+            @Nullable
+            File optionsFile = createOptionsFile();
+            parameters.getOptionsFile().set(optionsFile);
             parameters.getClasspath().from(getClasspath());
             parameters.getOutputDirectory().set(getDestinationDir());
             parameters.getSources().from(getSource());
@@ -186,13 +190,13 @@ public class ScalaDoc extends SourceTask {
             }
 
             String footer = options.getFooter();
-            if (footer!=null) {
+            if (footer != null) {
                 parameters.getOptions().add("-doc-footer");
                 parameters.getOptions().add(footer);
             }
 
             String docTitle = options.getDocTitle();
-            if (docTitle!=null) {
+            if (docTitle != null) {
                 parameters.getOptions().add("-doc-title");
                 parameters.getOptions().add(docTitle);
             }
@@ -204,9 +208,26 @@ public class ScalaDoc extends SourceTask {
             // options.getWindowTitle();
 
             List<String> additionalParameters = options.getAdditionalParameters();
-            if (additionalParameters!=null) {
+            if (additionalParameters != null) {
                 parameters.getOptions().addAll(additionalParameters);
             }
         });
+    }
+
+    /**
+     * Creates the file to hold the options for the scaladoc process.
+     *
+     * @implNote This file will be cleaned up by {@link GenerateScaladoc#execute()}.
+     */
+    @Nullable
+    private File createOptionsFile() {
+        try {
+            File taskTempDir = getTemporaryDir();
+            File optionsFile = TempFiles.createTempFile("scaladoc", "options", taskTempDir);
+            optionsFile.deleteOnExit();
+            return optionsFile;
+        } catch (IOException e) {
+            return null;
+        }
     }
 }

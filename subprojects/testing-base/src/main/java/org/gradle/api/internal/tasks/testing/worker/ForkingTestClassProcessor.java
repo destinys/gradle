@@ -110,7 +110,6 @@ public class ForkingTestClassProcessor implements TestClassProcessor {
         builder.applicationClasspath(classPath);
         builder.applicationModulePath(modulePath);
         options.copyTo(builder.getJavaCommand());
-        builder.getJavaCommand().getModularity().getInferModulePath().set(modulePath.iterator().hasNext());
         builder.getJavaCommand().jvmArgs("-Dorg.gradle.native=false");
         buildConfigAction.execute(builder);
 
@@ -134,6 +133,7 @@ public class ForkingTestClassProcessor implements TestClassProcessor {
             moduleRegistry.getModule("gradle-logging").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getModule("gradle-messaging").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getModule("gradle-files").getImplementationClasspath().getAsURLs(),
+            moduleRegistry.getModule("gradle-file-temp").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getModule("gradle-hashing").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getModule("gradle-base-services").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getModule("gradle-cli").getImplementationClasspath().getAsURLs(),
@@ -148,7 +148,8 @@ public class ForkingTestClassProcessor implements TestClassProcessor {
             moduleRegistry.getExternalModule("native-platform").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getExternalModule("kryo").getImplementationClasspath().getAsURLs(),
             moduleRegistry.getExternalModule("commons-lang").getImplementationClasspath().getAsURLs(),
-            moduleRegistry.getExternalModule("junit").getImplementationClasspath().getAsURLs()
+            moduleRegistry.getExternalModule("junit").getImplementationClasspath().getAsURLs(),
+            moduleRegistry.getExternalModule("javax.inject").getImplementationClasspath().getAsURLs()
         );
     }
 

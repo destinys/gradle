@@ -19,24 +19,32 @@ import org.gradle.api.internal.changedetection.TaskExecutionMode;
 import org.gradle.api.internal.tasks.TaskExecutionContext;
 import org.gradle.api.internal.tasks.properties.TaskProperties;
 import org.gradle.execution.plan.LocalTaskNode;
+import org.gradle.internal.execution.WorkValidationContext;
 import org.gradle.internal.operations.BuildOperationContext;
+import org.gradle.internal.reflect.TypeValidationContext;
 import org.gradle.internal.time.Time;
 import org.gradle.internal.time.Timer;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class DefaultTaskExecutionContext implements TaskExecutionContext {
 
     private final LocalTaskNode localTaskNode;
+    private final TaskProperties properties;
+    private final WorkValidationContext validationContext;
+    private final Consumer<TypeValidationContext> validationAction;
     private TaskExecutionMode taskExecutionMode;
-    private TaskProperties properties;
     private Long executionTime;
     private BuildOperationContext snapshotTaskInputsBuildOperationContext;
 
     private final Timer executionTimer;
 
-    public DefaultTaskExecutionContext(LocalTaskNode localTaskNode) {
+    public DefaultTaskExecutionContext(LocalTaskNode localTaskNode, TaskProperties taskProperties, WorkValidationContext validationContext, Consumer<TypeValidationContext> validationAction) {
         this.localTaskNode = localTaskNode;
+        this.properties = taskProperties;
+        this.validationContext = validationContext;
+        this.validationAction = validationAction;
         this.executionTimer = Time.startTimer();
     }
 
@@ -51,6 +59,16 @@ public class DefaultTaskExecutionContext implements TaskExecutionContext {
     }
 
     @Override
+    public WorkValidationContext getValidationContext() {
+        return validationContext;
+    }
+
+    @Override
+    public Consumer<TypeValidationContext> getValidationAction() {
+        return validationAction;
+    }
+
+    @Override
     public void setTaskExecutionMode(TaskExecutionMode taskExecutionMode) {
         this.taskExecutionMode = taskExecutionMode;
     }
@@ -62,11 +80,6 @@ public class DefaultTaskExecutionContext implements TaskExecutionContext {
         }
 
         return this.executionTime = executionTimer.getElapsedMillis();
-    }
-
-    @Override
-    public void setTaskProperties(TaskProperties properties) {
-        this.properties = properties;
     }
 
     @Override

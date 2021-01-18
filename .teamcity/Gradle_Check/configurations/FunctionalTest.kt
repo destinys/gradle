@@ -1,6 +1,5 @@
 package configurations
 
-import Gradle_Check.model.slowSubprojects
 import common.Os
 import jetbrains.buildServer.configs.kotlin.v2019_2.AbsoluteId
 import jetbrains.buildServer.configs.kotlin.v2019_2.BuildSteps
@@ -41,14 +40,14 @@ class FunctionalTest(
         }
     }
 
-    val enableTestDistribution = testCoverage.testDistribution && subprojects.intersect(slowSubprojects).isEmpty()
+    val enableTestDistribution = testCoverage.testDistribution
 
     applyTestDefaults(model, this, testTasks, notQuick = !testCoverage.isQuick, os = testCoverage.os,
         extraParameters = (
             listOf(""""-PtestJavaHome=${testCoverage.os.javaHome(testCoverage.testJvmVersion, testCoverage.vendor)}"""") +
                 buildScanTags.map { buildScanTag(it) } +
                 buildScanValues.map { buildScanCustomValue(it.key, it.value) } +
-                if (enableTestDistribution) "-DenableTestDistribution=true -Dscan.tag.test-distribution -Dgradle.enterprise.url=https://e.grdev.net" else "" +
+                if (enableExperimentalTestDistribution(testCoverage, subprojects)) "-DenableTestDistribution=%enableTestDistribution%" else "" +
                     extraParameters
             ).filter { it.isNotBlank() }.joinToString(separator = " "),
         timeout = testCoverage.testType.timeout,
@@ -81,15 +80,19 @@ class FunctionalTest(
     }
 })
 
+fun enableExperimentalTestDistribution(testCoverage: TestCoverage, subprojects: List<String>) = testCoverage.os == Os.LINUX && (subprojects == listOf("core") || subprojects == listOf("dependency-management"))
+
 fun getTestTaskName(testCoverage: TestCoverage, stage: Stage, subprojects: List<String>): String {
     val testTaskName = "${testCoverage.testType.name}Test"
-    return if (subprojects.intersect(slowSubprojects).isNotEmpty()) {
-        subprojects.joinToString(" ") { "$it:$testTaskName" }
-    } else if (testCoverage.testDistribution && stage.omitsSlowProjects) {
-        return "$testTaskName ${slowSubprojects.joinToString(" ") { "-x $it:$testTaskName" }}"
-    } else if (subprojects.isEmpty()) {
-        testTaskName
-    } else {
-        subprojects.joinToString(" ") { "$it:$testTaskName" }
+    return when {
+        testCoverage.testDistribution -> {
+            return testTaskName
+        }
+        subprojects.isEmpty() -> {
+            testTaskName
+        }
+        else -> {
+            subprojects.joinToString(" ") { "$it:$testTaskName" }
+        }
     }
 }

@@ -79,6 +79,10 @@ public abstract class Node implements Comparable<Node> {
         return state != ExecutionState.UNKNOWN;
     }
 
+    public boolean isExecuting() {
+        return state == ExecutionState.EXECUTING;
+    }
+
     public boolean isComplete() {
         return state == ExecutionState.EXECUTED
             || state == ExecutionState.SKIPPED
@@ -244,6 +248,16 @@ public abstract class Node implements Comparable<Node> {
 
     @OverridingMethodsMustInvokeSuper
     public Iterable<Node> getAllSuccessors() {
+        return dependencySuccessors;
+    }
+
+    /**
+     * Returns all the nodes which are hard successors, i.e. which have a non-removable relationship to the current node.
+     *
+     * For example, for tasks `shouldRunAfter` isn't a hard successor while `mustRunAfter` is.
+     */
+    @OverridingMethodsMustInvokeSuper
+    public Iterable<Node> getHardSuccessors() {
         return dependencySuccessors;
     }
 

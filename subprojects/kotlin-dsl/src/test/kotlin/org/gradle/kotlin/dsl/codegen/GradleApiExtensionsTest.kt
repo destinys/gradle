@@ -21,6 +21,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import org.gradle.api.internal.file.TmpDirTemporaryFileProvider
 import org.gradle.api.internal.file.pattern.PatternMatcher
 
 import org.gradle.internal.hash.HashUtil
@@ -66,7 +67,7 @@ class GradleApiExtensionsTest : TestWithClassPath() {
             ClassAndGroovyNamedArguments::class
         ) {
 
-            assertGeneratedJarHash("3bb8eaa41d25abee0262b76e2eadf22f")
+            assertGeneratedJarHash("90db312180f41e0893ffd9560ff71cf3")
         }
     }
 
@@ -371,7 +372,12 @@ class GradleApiExtensionsTest : TestWithClassPath() {
     private
     fun GradleApiExtensionsTest.ApiKotlinExtensionsGeneration.assertGeneratedJarHash(hash: String) =
         file("api-extensions.jar").let { generatedJar ->
-            generateApiExtensionsJar(generatedJar, apiJars, apiMetadataJar) {}
+            generateApiExtensionsJar(
+                TmpDirTemporaryFileProvider.createLegacy(),
+                generatedJar,
+                apiJars,
+                apiMetadataJar
+            ) {}
             assertThat(
                 HashUtil.createHash(generatedJar, "MD5").asZeroPaddedHexString(32),
                 equalTo(hash)

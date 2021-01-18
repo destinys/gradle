@@ -20,12 +20,14 @@ import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
-@RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject", "mediumJavaCompositeBuild", "mediumJavaPredefinedCompositeBuild"])
-)
+@RunFor([
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject", "mediumJavaCompositeBuild"]),
+    @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["mediumJavaPredefinedCompositeBuild"])
+])
 class JavaCleanAssemblePerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def "clean assemble"() {
@@ -33,7 +35,7 @@ class JavaCleanAssemblePerformanceTest extends AbstractCrossVersionPerformanceTe
         runner.warmUpRuns = 2
         runner.runs = 6
         runner.tasksToRun = ["clean", "assemble"]
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
         runner.minimumBaseVersion = runner.testProject.contains("Composite") ? "4.0" : null
 
         when:

@@ -16,7 +16,11 @@
 
 package org.gradle.integtests.fixtures.versions
 
+import org.gradle.api.JavaVersion
 import org.gradle.internal.Factory
+import org.gradle.util.VersionNumber
+
+import static org.junit.Assume.assumeTrue
 
 
 /**
@@ -113,4 +117,32 @@ class AndroidGradlePluginVersions {
         }
         return properties
     }
+
+    static void assumeCurrentJavaVersionIsSupportedBy(String agpVersion) {
+        VersionNumber agpVersionNumber = VersionNumber.parse(agpVersion)
+        JavaVersion current = JavaVersion.current()
+        JavaVersion mini = getMinimumJavaVersionFor(agpVersionNumber)
+        assumeTrue("AGP $agpVersion minimum supported Java version is $mini, current is $current", current >= mini)
+        JavaVersion maxi = getMaximumJavaVersionFor(agpVersionNumber)
+        if (maxi != null) {
+            assumeTrue("AGP $agpVersion maximum supported Java version is $maxi, current is $current", current <= maxi)
+        }
+    }
+
+    private static JavaVersion getMinimumJavaVersionFor(VersionNumber agpVersion) {
+        if (agpVersion.baseVersion < AGP_7_0_VERSION_NUMBER) {
+            return JavaVersion.VERSION_1_8
+        }
+        return JavaVersion.VERSION_11
+    }
+
+    private static JavaVersion getMaximumJavaVersionFor(VersionNumber agpVersion) {
+        // This is mainly to prevent running all AGP tests on too many java versions and reduce CI time
+        if (agpVersion.baseVersion < AGP_7_0_VERSION_NUMBER) {
+            return JavaVersion.VERSION_11
+        }
+        return null
+    }
+
+    private static final VersionNumber AGP_7_0_VERSION_NUMBER = VersionNumber.parse('7.0.0')
 }

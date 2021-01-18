@@ -23,12 +23,14 @@ import org.gradle.performance.fixture.JavaTestProject
 import org.gradle.performance.mutator.ApplyAbiChangeToGroovySourceFileMutator
 import org.gradle.profiler.mutations.ApplyAbiChangeToJavaSourceFileMutator
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
-@RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeMonolithicJavaProject", "largeMonolithicGroovyProject", "largeGroovyMultiProject"])
-)
+@RunFor([
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProject", "largeGroovyMultiProject"]),
+    @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeMonolithicGroovyProject", "largeMonolithicJavaProject"])
+])
 class JavaABIChangePerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def "assemble for abi change"() {
@@ -40,7 +42,7 @@ class JavaABIChangePerformanceTest extends AbstractCrossVersionPerformanceTest {
             def fileToChange = new File(it.projectDir, testProject.config.fileToChangeByScenario['assemble'])
             return isGroovyProject ? new ApplyAbiChangeToGroovySourceFileMutator(fileToChange) : new ApplyAbiChangeToJavaSourceFileMutator(fileToChange)
         }
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201201230040+0000"]
         if (isGroovyProject) {
             runner.minimumBaseVersion = '5.0'
         }

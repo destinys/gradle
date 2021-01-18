@@ -19,11 +19,8 @@ package org.gradle.internal.execution.steps;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSortedMap;
 import org.gradle.api.InvalidUserDataException;
-import org.gradle.internal.execution.CachingContext;
-import org.gradle.internal.execution.IncrementalChangesContext;
-import org.gradle.internal.execution.Result;
-import org.gradle.internal.execution.Step;
 import org.gradle.internal.execution.UnitOfWork;
+import org.gradle.internal.execution.WorkValidationContext;
 import org.gradle.internal.execution.caching.CachingState;
 import org.gradle.internal.execution.history.AfterPreviousExecutionState;
 import org.gradle.internal.execution.history.BeforeExecutionState;
@@ -43,6 +40,7 @@ import java.util.function.Supplier;
 
 public class ResolveChangesStep<R extends Result> implements Step<CachingContext, R> {
     private static final String NO_HISTORY = "No history is available.";
+    private static final String VALIDATION_FAILED = "Validation failed.";
 
     private final ExecutionStateChangeDetector changeDetector;
 
@@ -69,13 +67,16 @@ public class ResolveChangesStep<R extends Result> implements Step<CachingContext
             .orElseGet(() ->
                 beforeExecutionState
                     .map(beforeExecution -> context.getAfterPreviousExecutionState()
-                        .map(afterPreviousExecution -> changeDetector.detectChanges(
-                            afterPreviousExecution,
-                            beforeExecution,
-                            work,
-                            createIncrementalInputProperties(work))
+                        .map(afterPreviousExecution -> context.getValidationProblems()
+                            .map(__ -> rebuildChanges(work, beforeExecution, VALIDATION_FAILED))
+                            .orElseGet(() ->
+                                changeDetector.detectChanges(
+                                    afterPreviousExecution,
+                                    beforeExecution,
+                                    work,
+                                    createIncrementalInputProperties(work)))
                         )
-                        .orElseGet(() -> new RebuildExecutionStateChanges(NO_HISTORY, beforeExecution.getInputFileProperties(), createIncrementalInputProperties(work)))
+                        .orElseGet(() -> rebuildChanges(work, beforeExecution, NO_HISTORY))
                     )
                     .orElse(null)
             );
@@ -94,6 +95,11 @@ public class ResolveChangesStep<R extends Result> implements Step<CachingContext
             @Override
             public Optional<String> getRebuildReason() {
                 return context.getRebuildReason();
+            }
+
+            @Override
+            public WorkValidationContext getValidationContext() {
+                return context.getValidationContext();
             }
 
             @Override
@@ -127,10 +133,19 @@ public class ResolveChangesStep<R extends Result> implements Step<CachingContext
             }
 
             @Override
+            public Optional<ValidationResult> getValidationProblems() {
+                return context.getValidationProblems();
+            }
+
+            @Override
             public Optional<BeforeExecutionState> getBeforeExecutionState() {
                 return beforeExecutionState;
             }
         });
+    }
+
+    private static ExecutionStateChanges rebuildChanges(UnitOfWork work, BeforeExecutionState beforeExecution, String rebuildReason) {
+        return new RebuildExecutionStateChanges(rebuildReason, beforeExecution.getInputFileProperties(), createIncrementalInputProperties(work));
     }
 
     private static IncrementalInputProperties createIncrementalInputProperties(UnitOfWork work) {

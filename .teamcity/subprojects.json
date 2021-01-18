@@ -164,7 +164,7 @@
     "dirName": "core-api",
     "name": "core-api",
     "unitTests": true,
-    "functionalTests": false,
+    "functionalTests": true,
     "crossVersionTests": false
   },
   {
@@ -280,6 +280,13 @@
     "crossVersionTests": false
   },
   {
+    "dirName": "file-temp",
+    "name": "file-temp",
+    "unitTests": false,
+    "functionalTests": false,
+    "crossVersionTests": false
+  },
+  {
     "dirName": "file-watching",
     "name": "file-watching",
     "unitTests": true,
@@ -311,13 +318,6 @@
     "dirName": "ide-native",
     "name": "ide-native",
     "unitTests": true,
-    "functionalTests": true,
-    "crossVersionTests": false
-  },
-  {
-    "dirName": "ide-play",
-    "name": "ide-play",
-    "unitTests": false,
     "functionalTests": true,
     "crossVersionTests": false
   },
@@ -389,13 +389,6 @@
     "name": "java-compiler-plugin",
     "unitTests": false,
     "functionalTests": false,
-    "crossVersionTests": false
-  },
-  {
-    "dirName": "javascript",
-    "name": "javascript",
-    "unitTests": true,
-    "functionalTests": true,
     "crossVersionTests": false
   },
   {
@@ -472,19 +465,12 @@
     "dirName": "language-jvm",
     "name": "language-jvm",
     "unitTests": true,
-    "functionalTests": true,
+    "functionalTests": false,
     "crossVersionTests": false
   },
   {
     "dirName": "language-native",
     "name": "language-native",
-    "unitTests": true,
-    "functionalTests": true,
-    "crossVersionTests": false
-  },
-  {
-    "dirName": "language-scala",
-    "name": "language-scala",
     "unitTests": true,
     "functionalTests": true,
     "crossVersionTests": false
@@ -576,13 +562,6 @@
   {
     "dirName": "platform-native",
     "name": "platform-native",
-    "unitTests": true,
-    "functionalTests": true,
-    "crossVersionTests": false
-  },
-  {
-    "dirName": "platform-play",
-    "name": "platform-play",
     "unitTests": true,
     "functionalTests": true,
     "crossVersionTests": false

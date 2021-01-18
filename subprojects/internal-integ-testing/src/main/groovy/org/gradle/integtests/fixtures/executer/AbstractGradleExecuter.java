@@ -190,7 +190,7 @@ public abstract class AbstractGradleExecuter implements GradleExecuter, Resettab
 
     private boolean noExplicitTmpDir;
     protected boolean noExplicitNativeServicesDir;
-    private boolean fullDeprecationStackTrace = true;
+    private boolean fullDeprecationStackTrace;
     private boolean checkDeprecations = true;
     private boolean checkDaemonCrash = true;
 
@@ -362,8 +362,8 @@ public abstract class AbstractGradleExecuter implements GradleExecuter, Resettab
         if (noExplicitNativeServicesDir) {
             executer.withNoExplicitNativeServicesDir();
         }
-        if (!fullDeprecationStackTrace) {
-            executer.withFullDeprecationStackTraceDisabled();
+        if (fullDeprecationStackTrace) {
+            executer.withFullDeprecationStackTraceEnabled();
         }
         if (defaultLocale != null) {
             executer.withDefaultLocale(defaultLocale);
@@ -1305,12 +1305,21 @@ public abstract class AbstractGradleExecuter implements GradleExecuter, Resettab
                         insideKotlinCompilerFlakyStacktrace = true;
                         i++;
                     } else if (insideKotlinCompilerFlakyStacktrace &&
-                        (line.contains("java.rmi.UnmarshalException") || 
-                         line.contains("java.io.EOFException")) ||
-                         // Verbose logging by Jetty when connector is shutdown 
-                         // https://github.com/eclipse/jetty.project/issues/3529      
-                         line.contains("java.nio.channels.CancelledKeyException")) {
+                        (line.contains("java.rmi.UnmarshalException") ||
+                            line.contains("java.io.EOFException")) ||
+                        // Verbose logging by Jetty when connector is shutdown
+                        // https://github.com/eclipse/jetty.project/issues/3529
+                        line.contains("java.nio.channels.CancelledKeyException")) {
                         i++;
+                        i = skipStackTrace(lines, i);
+                    } else if (line.contains("com.amazonaws.http.IdleConnectionReaper")) {
+                        /*
+                        2021-01-05T08:15:51.329+0100 [DEBUG] [com.amazonaws.http.IdleConnectionReaper] Reaper thread:
+                        java.lang.InterruptedException: sleep interrupted
+                            at java.base/java.lang.Thread.sleep(Native Method)
+                            at com.amazonaws.http.IdleConnectionReaper.run(IdleConnectionReaper.java:188)
+                         */
+                        i += 2;
                         i = skipStackTrace(lines, i);
                     } else if (line.matches(".*use(s)? or override(s)? a deprecated API\\.")) {
                         // A javac warning, ignore
@@ -1458,8 +1467,8 @@ public abstract class AbstractGradleExecuter implements GradleExecuter, Resettab
     }
 
     @Override
-    public GradleExecuter withFullDeprecationStackTraceDisabled() {
-        fullDeprecationStackTrace = false;
+    public GradleExecuter withFullDeprecationStackTraceEnabled() {
+        fullDeprecationStackTrace = true;
         return this;
     }
 

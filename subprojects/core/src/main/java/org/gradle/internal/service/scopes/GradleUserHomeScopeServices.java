@@ -25,6 +25,7 @@ import org.gradle.api.internal.classpath.ModuleRegistry;
 import org.gradle.api.internal.file.FileCollectionFactory;
 import org.gradle.api.internal.file.FileResolver;
 import org.gradle.api.internal.file.TemporaryFileProvider;
+import org.gradle.api.internal.file.TmpDirTemporaryFileProvider;
 import org.gradle.api.internal.initialization.loadercache.ClassLoaderCache;
 import org.gradle.api.internal.initialization.loadercache.DefaultClassLoaderCache;
 import org.gradle.api.model.ObjectFactory;
@@ -58,6 +59,8 @@ import org.gradle.internal.classpath.DefaultCachedClasspathTransformer;
 import org.gradle.internal.classpath.DefaultClasspathTransformerCacheFactory;
 import org.gradle.internal.concurrent.ExecutorFactory;
 import org.gradle.internal.event.ListenerManager;
+import org.gradle.internal.execution.InputFingerprinter;
+import org.gradle.internal.execution.impl.DefaultInputFingerprinter;
 import org.gradle.internal.execution.timeout.TimeoutHandler;
 import org.gradle.internal.execution.timeout.impl.DefaultTimeoutHandler;
 import org.gradle.internal.file.FileAccessTimeJournal;
@@ -72,6 +75,7 @@ import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.remote.MessagingServer;
 import org.gradle.internal.service.ServiceRegistration;
 import org.gradle.internal.service.ServiceRegistry;
+import org.gradle.internal.snapshot.ValueSnapshotter;
 import org.gradle.internal.vfs.FileSystemAccess;
 import org.gradle.process.internal.ExecFactory;
 import org.gradle.process.internal.JavaExecHandleFactory;
@@ -100,6 +104,7 @@ public class GradleUserHomeScopeServices extends WorkerSharedUserHomeScopeServic
         registration.addProvider(new GradleUserHomeCleanupServices());
         registration.add(ClasspathWalker.class);
         registration.add(ClasspathBuilder.class);
+        registration.add(TmpDirTemporaryFileProvider.class);
         for (PluginServiceRegistry plugin : globalServices.getAll(PluginServiceRegistry.class)) {
             plugin.registerGradleUserHomeServices(registration);
         }
@@ -225,4 +230,7 @@ public class GradleUserHomeScopeServices extends WorkerSharedUserHomeScopeServic
         return new DefaultTimeoutHandler(executorFactory.createScheduled("execution timeouts", 1), currentBuildOperationRef);
     }
 
+    InputFingerprinter createInputFingerprinter(ValueSnapshotter valueSnapshotter) {
+        return new DefaultInputFingerprinter(valueSnapshotter);
+    }
 }

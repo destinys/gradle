@@ -165,6 +165,16 @@ class ConfigurationCacheProblemReportingIntegrationTest extends AbstractConfigur
     def "serialization problems are reported and fail the build by default invalidating the cache"() {
         given:
         def configurationCache = newConfigurationCacheFixture()
+        executer.beforeExecute {
+            executer.expectDocumentedDeprecationWarning("Property 'prop' is not annotated with an input or output annotation. " +
+                "This behaviour has been deprecated and is scheduled to be removed in Gradle 7.0. " +
+                "Execution optimizations are disabled due to the failed validation. " +
+                "See https://docs.gradle.org/current/userguide/more_about_tasks.html#sec:up_to_date_checks for more details.")
+            executer.expectDocumentedDeprecationWarning("Property 'anotherProp' is not annotated with an input or output annotation. " +
+                "This behaviour has been deprecated and is scheduled to be removed in Gradle 7.0. " +
+                "Execution optimizations are disabled due to the failed validation. " +
+                "See https://docs.gradle.org/current/userguide/more_about_tasks.html#sec:up_to_date_checks for more details.")
+        }
 
         buildFile << """
             class BrokenTaskType extends DefaultTask {
@@ -736,7 +746,6 @@ class ConfigurationCacheProblemReportingIntegrationTest extends AbstractConfigur
         registrationPoint                             | code
         "Gradle.addBuildListener"                     | "gradle.addBuildListener(new BuildAdapter())"
         "Gradle.addListener"                          | "gradle.addListener(new BuildAdapter())"
-        "Gradle.buildStarted"                         | "gradle.buildStarted {}"
         "Gradle.buildFinished"                        | "gradle.buildFinished {}"
         "TaskExecutionGraph.addTaskExecutionListener" | "gradle.taskGraph.addTaskExecutionListener(new TaskExecutionAdapter())"
         "TaskExecutionGraph.beforeTask"               | "gradle.taskGraph.beforeTask {}"

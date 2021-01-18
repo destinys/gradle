@@ -1,5 +1,3 @@
-import gradlebuild.cleanup.WhenNotEmpty
-
 plugins {
     id("gradlebuild.distribution.api-java")
 }
@@ -26,10 +24,12 @@ dependencies {
     testImplementation(testFixtures(project(":logging")))
 
     testFixturesImplementation(project(":base-services"))
+
+    integTestDistributionRuntimeOnly(project(":distributions-basics"))
 }
 
 classycle {
-    excludePatterns.set(listOf("org/gradle/**"))
+    excludePatterns.add("org/gradle/**")
 }
 
 strictCompile {
@@ -37,6 +37,5 @@ strictCompile {
     ignoreParameterizedVarargType() // [unchecked] Possible heap pollution from parameterized vararg type: ArtifactResolutionQuery, RepositoryContentDescriptor, HasMultipleValues
 }
 
-testFilesCleanup {
-    policy.set(WhenNotEmpty.REPORT)
-}
+integTest.usesSamples.set(true)
+testFilesCleanup.reportOnly.set(true)

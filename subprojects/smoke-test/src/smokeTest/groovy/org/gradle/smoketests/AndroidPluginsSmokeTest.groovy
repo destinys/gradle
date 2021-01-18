@@ -20,8 +20,6 @@ import org.gradle.integtests.fixtures.UnsupportedWithConfigurationCache
 import org.gradle.integtests.fixtures.android.AndroidHome
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.util.GradleVersion
-import org.gradle.util.Requires
-import org.gradle.util.TestPrecondition
 import org.gradle.util.VersionNumber
 import spock.lang.Unroll
 
@@ -34,7 +32,6 @@ import spock.lang.Unroll
  * https://androidstudio.googleblog.com/
  *
  */
-@Requires(TestPrecondition.JDK11_OR_EARLIER)
 class AndroidPluginsSmokeTest extends AbstractSmokeTest {
 
     public static final String JAVA_COMPILE_DEPRECATION_MESSAGE = "Extending the JavaCompile task has been deprecated. This is scheduled to be removed in Gradle 7.0. Configure the task instead."
@@ -56,6 +53,9 @@ class AndroidPluginsSmokeTest extends AbstractSmokeTest {
     ) {
 
         given:
+        AGP_VERSIONS.assumeCurrentJavaVersionIsSupportedBy(agpVersion)
+
+        and:
         def abiChange = androidLibraryAndApplicationBuild(agpVersion)
 
         and:
@@ -100,7 +100,10 @@ class AndroidPluginsSmokeTest extends AbstractSmokeTest {
         then:
         result.task(':app:compileDebugJavaWithJavac').outcome == TaskOutcome.UP_TO_DATE
         result.task(':library:assembleDebug').outcome == TaskOutcome.UP_TO_DATE
-        result.task(':app:assembleDebug').outcome == TaskOutcome.UP_TO_DATE
+        // In AGP 3.4 and 3.5 some of the dependencies of `:app:assembleDebug` are invalid and are thus forced to re-execute every time
+        result.task(':app:assembleDebug').outcome == (VersionNumber.parse(agpVersion) < VersionNumber.parse("3.6.0")
+            ? TaskOutcome.SUCCESS
+            : TaskOutcome.UP_TO_DATE)
 
         and:
         assertConfigurationCacheStateLoaded()
@@ -213,7 +216,7 @@ class AndroidPluginsSmokeTest extends AbstractSmokeTest {
         appBuildFile << activityDependency()
         appBuildFile << """
             dependencies {
-                compile project(':${library}')
+                implementation project(':${library}')
             }
         """
 
@@ -232,7 +235,7 @@ class AndroidPluginsSmokeTest extends AbstractSmokeTest {
     private static String activityDependency() {
         """
             dependencies {
-                compile 'joda-time:joda-time:2.7'
+                implementation 'joda-time:joda-time:2.7'
             }
         """
     }

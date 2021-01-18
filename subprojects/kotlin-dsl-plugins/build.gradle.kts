@@ -1,21 +1,3 @@
-/*
- * Copyright 2018 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-import gradlebuild.cleanup.WhenNotEmpty
-
 plugins {
     id("gradlebuild.portalplugin.kotlin")
     id("gradlebuild.kotlin-dsl-plugin-extensions")
@@ -24,7 +6,7 @@ plugins {
 description = "Kotlin DSL Gradle Plugins deployed to the Plugin Portal"
 
 group = "org.gradle.kotlin"
-version = "1.4.10"
+version = "2.0.1"
 
 base.archivesBaseName = "plugins"
 
@@ -69,10 +51,11 @@ dependencies {
 }
 
 classycle {
-    excludePatterns.set(listOf("org/gradle/kotlin/dsl/plugins/base/**"))
+    excludePatterns.add("org/gradle/kotlin/dsl/plugins/base/**")
 }
 
-// plugins ------------------------------------------------------------
+testFilesCleanup.reportOnly.set(true)
+
 pluginPublish {
     bundledGradlePlugin(
         name = "embeddedKotlin",
@@ -108,15 +91,4 @@ pluginPublish {
         pluginId = "org.gradle.kotlin.kotlin-dsl.precompiled-script-plugins",
         pluginClass = "org.gradle.kotlin.dsl.plugins.precompiled.PrecompiledScriptPlugins"
     )
-}
-
-// TODO:kotlin-dsl investigate
-// See https://builds.gradle.org/viewLog.html?buildId=19024848&problemId=23230
-tasks.noDaemonIntegTest.configure {
-    enabled = false
-}
-
-// TODO:kotlin-dsl
-testFilesCleanup {
-    policy.set(WhenNotEmpty.REPORT)
 }

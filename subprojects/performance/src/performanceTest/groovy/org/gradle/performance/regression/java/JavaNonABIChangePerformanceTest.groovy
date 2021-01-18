@@ -24,11 +24,11 @@ import org.gradle.performance.mutator.ApplyNonAbiChangeToGroovySourceFileMutator
 import org.gradle.profiler.mutations.ApplyNonAbiChangeToJavaSourceFileMutator
 import spock.lang.Unroll
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor([
-    @Scenario(type = TEST, operatingSystems = [LINUX],
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX],
         testProjects = ["largeJavaMultiProject", "largeGroovyMultiProject", "largeMonolithicJavaProject", "largeMonolithicGroovyProject"])
 ])
 class JavaNonABIChangePerformanceTest extends AbstractCrossVersionPerformanceTest {
@@ -37,7 +37,7 @@ class JavaNonABIChangePerformanceTest extends AbstractCrossVersionPerformanceTes
         given:
         def testProject = JavaTestProject.projectFor(runner.testProject)
         runner.tasksToRun = ['assemble']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
         boolean isGroovyProject = testProject.name().contains("GROOVY")
         runner.addBuildMutator {
             def fileToChange = new File(it.projectDir, testProject.config.fileToChangeByScenario['assemble'])

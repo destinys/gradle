@@ -50,10 +50,6 @@ fun performanceTestCommandLine(task: String, baselines: String, extraParameters:
     "-Porg.gradle.performance.db.username" to "%performance.db.username%"
 ).map { (key, value) -> os.escapeKeyValuePair(key, value) }
 
-fun distributedPerformanceTestParameters(workerId: String = "Gradle_Check_IndividualPerformanceScenarioWorkersLinux") = listOf(
-    "-Porg.gradle.performance.buildTypeId=$workerId -Porg.gradle.performance.workerTestTaskName=fullPerformanceTest -Porg.gradle.performance.coordinatorBuildId=%teamcity.build.id%"
-)
-
 const val individualPerformanceTestArtifactRules = """
 subprojects/*/build/test-results-*.zip => results
 subprojects/*/build/tmp/**/log.txt => failure-logs
@@ -77,22 +73,8 @@ fun BuildSteps.substDirOnWindows(os: Os, buildCache: BuildCache) {
             executionMode = BuildStep.ExecutionMode.ALWAYS
             scriptContent = """subst p: "%teamcity.build.checkoutDir%" """
         }
-        // Gradle detects overlapping outputs when running first on a subst drive and then in the original location.
-        // Even when running clean builds on CI, we don't run clean in buildSrc, so there may be stale leftover files there.
-        // This means that we need to clean buildSrc before running for the first time on the subst drive
-        // and before running the first time on the original location again.
-        gradleWrapper {
-            name = "CLEAN_BUILD_SRC_ON_SUBST_DRIVE"
-            tasks = "clean"
-            workingDir = "P:/buildSrc"
-            executionMode = BuildStep.ExecutionMode.ALWAYS
-            gradleWrapperPath = "../"
-            gradleParams = (
-                buildToolGradleParameters() +
-                    buildScanTag("PerformanceTest") +
-                    buildCache.gradleParameters(os)
-                ).joinToString(separator = " ")
-        }
+        cleanBuildLogicBuild("P:/build-logic-commons", buildCache, os)
+        cleanBuildLogicBuild("P:/build-logic", buildCache, os)
     }
 }
 
@@ -103,17 +85,26 @@ fun BuildSteps.removeSubstDirOnWindows(os: Os, buildCache: BuildCache) {
             executionMode = BuildStep.ExecutionMode.ALWAYS
             scriptContent = """subst p: /d"""
         }
-        gradleWrapper {
-            name = "CLEAN_BUILD_SRC_ON_CHECKOUT"
-            tasks = "clean"
-            workingDir = "%teamcity.build.checkoutDir%/buildSrc"
-            gradleWrapperPath = "../"
-            executionMode = BuildStep.ExecutionMode.ALWAYS
-            gradleParams = (
-                buildToolGradleParameters() +
-                    buildScanTag("PerformanceTest") +
-                    buildCache.gradleParameters(os)
-                ).joinToString(separator = " ")
-        }
+        cleanBuildLogicBuild("%teamcity.build.checkoutDir%/build-logic-commons", buildCache, os)
+        cleanBuildLogicBuild("%teamcity.build.checkoutDir%/build-logic", buildCache, os)
+    }
+}
+
+private fun BuildSteps.cleanBuildLogicBuild(buildDir: String, buildCache: BuildCache, os: Os) {
+    // Gradle detects overlapping outputs when running first on a subst drive and then in the original location.
+    // Even when running clean builds on CI, we don't run clean in buildSrc, so there may be stale leftover files there.
+    // This means that we need to clean buildSrc before running for the first time on the subst drive
+    // and before running the first time on the original location again.
+    gradleWrapper {
+        name = "CLEAN_${buildDir.toUpperCase().replace("[:/%.]".toRegex(), "_")}"
+        tasks = "clean"
+        workingDir = buildDir
+        executionMode = BuildStep.ExecutionMode.ALWAYS
+        gradleWrapperPath = "../"
+        gradleParams = (
+            buildToolGradleParameters() +
+                buildScanTag("PerformanceTest") +
+                buildCache.gradleParameters(os)
+            ).joinToString(separator = " ")
     }
 }

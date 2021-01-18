@@ -22,12 +22,9 @@ import org.gradle.caching.BuildCacheKey;
 import org.gradle.caching.internal.controller.BuildCacheController;
 import org.gradle.caching.internal.origin.OriginMetadata;
 import org.gradle.internal.Try;
-import org.gradle.internal.execution.BeforeExecutionContext;
-import org.gradle.internal.execution.CachingContext;
-import org.gradle.internal.execution.CachingResult;
-import org.gradle.internal.execution.Step;
+import org.gradle.internal.execution.ExecutionResult;
 import org.gradle.internal.execution.UnitOfWork;
-import org.gradle.internal.execution.UpToDateResult;
+import org.gradle.internal.execution.WorkValidationContext;
 import org.gradle.internal.execution.caching.CachingDisabledReason;
 import org.gradle.internal.execution.caching.CachingDisabledReasonCategory;
 import org.gradle.internal.execution.caching.CachingState;
@@ -53,6 +50,8 @@ public class ResolveCachingStateStep implements Step<BeforeExecutionContext, Cac
     private static final Logger LOGGER = LoggerFactory.getLogger(ResolveCachingStateStep.class);
     private static final CachingDisabledReason BUILD_CACHE_DISABLED_REASON = new CachingDisabledReason(CachingDisabledReasonCategory.BUILD_CACHE_DISABLED, "Build cache is disabled");
     private static final CachingState BUILD_CACHE_DISABLED_STATE = CachingState.disabledWithoutInputs(BUILD_CACHE_DISABLED_REASON);
+    private static final CachingDisabledReason VALIDATION_FAILED_REASON = new CachingDisabledReason(CachingDisabledReasonCategory.VALIDATION_FAILURE, "Validation failed");
+    private static final CachingState VALIDATION_FAILED_STATE = CachingState.disabledWithoutInputs(VALIDATION_FAILED_REASON);
 
     private final BuildCacheController buildCache;
     private final boolean buildScansEnabled;
@@ -73,6 +72,8 @@ public class ResolveCachingStateStep implements Step<BeforeExecutionContext, Cac
         CachingState cachingState;
         if (!buildCache.isEnabled() && !buildScansEnabled) {
             cachingState = BUILD_CACHE_DISABLED_STATE;
+        } else if (context.getValidationProblems().isPresent()) {
+            cachingState = VALIDATION_FAILED_STATE;
         } else {
             cachingState = context.getBeforeExecutionState()
                 .map(beforeExecutionState -> calculateCachingState(beforeExecutionState, work))
@@ -105,6 +106,11 @@ public class ResolveCachingStateStep implements Step<BeforeExecutionContext, Cac
             }
 
             @Override
+            public WorkValidationContext getValidationContext() {
+                return context.getValidationContext();
+            }
+
+            @Override
             public ImmutableSortedMap<String, ValueSnapshot> getInputProperties() {
                 return context.getInputProperties();
             }
@@ -132,6 +138,11 @@ public class ResolveCachingStateStep implements Step<BeforeExecutionContext, Cac
             @Override
             public Optional<AfterPreviousExecutionState> getAfterPreviousExecutionState() {
                 return context.getAfterPreviousExecutionState();
+            }
+
+            @Override
+            public Optional<ValidationResult> getValidationProblems() {
+                return context.getValidationProblems();
             }
 
             @Override

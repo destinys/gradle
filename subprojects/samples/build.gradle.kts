@@ -1,6 +1,3 @@
-import gradlebuild.cleanup.WhenNotEmpty
-import gradlebuild.integrationtests.integrationTestUsesSampleDir
-
 plugins {
     id("gradlebuild.internal.java")
 }
@@ -23,8 +20,5 @@ dependencies {
     integTestDistributionRuntimeOnly(project(":distributions-full"))
 }
 
-testFilesCleanup {
-    policy.set(WhenNotEmpty.REPORT)
-}
-
-integrationTestUsesSampleDir("subprojects/core-api/src/main/java", "subprojects/core/src/main/java")
+integTest.usesSamples.set(true)
+testFilesCleanup.reportOnly.set(true)

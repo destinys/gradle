@@ -34,11 +34,11 @@ import javax.servlet.ServletResponse
 import javax.servlet.http.HttpServletRequest
 import java.util.concurrent.atomic.AtomicInteger
 
-import static org.gradle.performance.annotations.ScenarioType.SLOW
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = SLOW, operatingSystems = [LINUX], testProjects = ["springBootApp"])
+    @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["springBootApp"])
 )
 class ParallelDownloadsPerformanceTest extends AbstractCrossVersionPerformanceTest implements WithExternalRepository {
     File tmpRepoDir = temporaryFolder.createDir('repository')
@@ -49,7 +49,7 @@ class ParallelDownloadsPerformanceTest extends AbstractCrossVersionPerformanceTe
     }
 
     def setup() {
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
         // Example project requires TaskContainer.register
         runner.minimumBaseVersion = "4.9"
         runner.warmUpRuns = 5

@@ -47,29 +47,12 @@ class WarPluginTest extends AbstractProjectBuilderSpec {
         providedCompileConfiguration.transitive
 
         when:
-        def compileConfiguration = project.configurations.getByName(JavaPlugin.COMPILE_CONFIGURATION_NAME)
-
-        then:
-        compileConfiguration.extendsFrom  == [providedCompileConfiguration] as Set
-        !compileConfiguration.visible
-        compileConfiguration.transitive
-
-        when:
         def providedRuntimeConfiguration = project.configurations.getByName(WarPlugin.PROVIDED_RUNTIME_CONFIGURATION_NAME)
 
         then:
         providedRuntimeConfiguration.extendsFrom == [providedCompileConfiguration] as Set
         !providedRuntimeConfiguration.visible
         providedRuntimeConfiguration.transitive
-
-        when:
-        def runtimeConfiguration = project.configurations.getByName(JavaPlugin.RUNTIME_CONFIGURATION_NAME)
-
-        then:
-        runtimeConfiguration.extendsFrom == [compileConfiguration, providedRuntimeConfiguration] as Set
-        !runtimeConfiguration.visible
-        runtimeConfiguration.transitive
-
 
     }
 
@@ -81,7 +64,7 @@ class WarPluginTest extends AbstractProjectBuilderSpec {
         def task = project.tasks[WarPlugin.WAR_TASK_NAME]
         task instanceof War
         dependsOn(JavaPlugin.CLASSES_TASK_NAME).matches(task)
-        task.destinationDir == project.libsDir
+        task.destinationDir == project.libsDirectory.get().asFile
 
         when:
         task = project.tasks[BasePlugin.ASSEMBLE_TASK_NAME]
@@ -99,7 +82,7 @@ class WarPluginTest extends AbstractProjectBuilderSpec {
         childProject.pluginManager.apply(JavaPlugin)
 
         project.dependencies {
-            runtime project(path: childProject.path, configuration: 'archives')
+            runtimeOnly project(path: childProject.path, configuration: 'archives')
         }
 
         then:
@@ -119,9 +102,9 @@ class WarPluginTest extends AbstractProjectBuilderSpec {
         when:
         project.dependencies {
             providedCompile project.layout.files(providedJar)
-            compile project.layout.files(compileJar)
+            implementation project.layout.files(compileJar)
             compileOnly project.layout.files(compileOnlyJar)
-            runtime project.layout.files(runtimeJar)
+            runtimeOnly project.layout.files(runtimeJar)
         }
 
         then:
@@ -137,7 +120,7 @@ class WarPluginTest extends AbstractProjectBuilderSpec {
 
         then:
         dependsOn(JavaPlugin.CLASSES_TASK_NAME).matches(task)
-        task.destinationDir == project.libsDir
+        task.destinationDir == project.libsDirectory.get().asFile
     }
 
     def "replaces jar as publication"() {

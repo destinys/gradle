@@ -42,11 +42,8 @@ class DependencyVerificationIntegrityCheckIntegTest extends AbstractDependencyVe
             }
         """
 
-        when:
+        expect:
         succeeds ":compileJava"
-
-        then:
-        outputContains("Dependency verification is an incubating feature.")
 
         where:
         kind     | jar                                                                                                                                | pom
@@ -102,7 +99,7 @@ class DependencyVerificationIntegrityCheckIntegTest extends AbstractDependencyVe
         succeeds "dependencies", "--configuration", "compileClasspath"
 
         then:
-        outputContains("Dependency verification is an incubating feature.")
+        noExceptionThrown()
 
         when:
         fails ":compileJava"
@@ -320,9 +317,6 @@ This can indicate that a dependency has been compromised. Please carefully verif
     }
 
     @Unroll
-    @ToBeFixedForConfigurationCache(
-        because = "broken file collection"
-    )
     def "fails on the first access to an artifact (not at the end of the build) using #firstResolution"() {
         createMetadataFile {
             addChecksum("org:foo:1.0", "sha1", "invalid")
@@ -358,8 +352,6 @@ This can indicate that a dependency has been compromised. Please carefully verif
             }
 
             task resolve {
-                inputs.files(configurations.compileClasspath)
-                inputs.files(configurations.testRuntimeClasspath)
                 doLast {
                     println "First resolution"
                     println $firstResolution
@@ -569,11 +561,9 @@ If the artifacts are trustworthy, you will need to update the gradle/verificatio
             }
         """
 
-        when:
+        expect:
         succeeds ':mod1:compileJava'
 
-        then:
-        outputContains("Dependency verification is an incubating feature.")
     }
 
     @Unroll
@@ -787,11 +777,8 @@ This can indicate that a dependency has been compromised. Please carefully verif
             }
         """
 
-        when:
+        expect:
         succeeds ":compileJava"
-
-        then:
-        outputContains("Dependency verification is an incubating feature.")
 
     }
 
@@ -813,11 +800,9 @@ This can indicate that a dependency has been compromised. Please carefully verif
             }
         """
 
-        when:
+        expect:
         succeeds ":compileJava"
 
-        then:
-        outputContains("Dependency verification is an incubating feature.")
     }
 
     def "can trust some artifacts"() {
@@ -844,11 +829,8 @@ This can indicate that a dependency has been compromised. Please carefully verif
             }
         """
 
-        when:
+        expect:
         succeeds ":compileJava"
-
-        then:
-        outputContains("Dependency verification is an incubating feature.")
     }
 
     @Unroll
@@ -869,11 +851,8 @@ This can indicate that a dependency has been compromised. Please carefully verif
             }
         """
 
-        when:
+        expect:
         succeeds ":compileJava"
-
-        then:
-        outputContains("Dependency verification is an incubating feature.")
 
         where:
         kind     | jar                                                                                                                                | pom

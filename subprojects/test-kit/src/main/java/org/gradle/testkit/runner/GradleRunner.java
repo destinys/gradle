@@ -16,7 +16,6 @@
 
 package org.gradle.testkit.runner;
 
-import org.gradle.api.Incubating;
 import org.gradle.testkit.runner.internal.DefaultGradleRunner;
 
 import javax.annotation.Nullable;
@@ -151,6 +150,8 @@ public abstract class GradleRunner {
      * This directory is not deleted by the runner after the test build.
      * <p>
      * You may wish to specify a location that is within your project and regularly cleaned, such as the project's build directory.
+     * <p>
+     * It can be set using the system property {@code org.gradle.testkit.dir} for the test process,
      * <p>
      * The actual contents of this directory are an internal implementation detail and may change at any time.
      *
@@ -311,7 +312,6 @@ public abstract class GradleRunner {
      * @since 5.2
      */
     @Nullable
-    @Incubating
     public abstract Map<String, String> getEnvironment();
 
     /**
@@ -325,8 +325,7 @@ public abstract class GradleRunner {
      * @return this
      * @since 5.2
      */
-    @Incubating
-    public abstract GradleRunner withEnvironment(Map<String, String> environmentVariables);
+    public abstract GradleRunner withEnvironment(@Nullable Map<String, String> environmentVariables);
 
     /**
      * Configures the runner to forward standard output from builds to the given writer.

@@ -15,6 +15,7 @@
  */
 package org.gradle.api.internal.file;
 
+import org.gradle.api.internal.DocumentationRegistry;
 import org.gradle.api.internal.cache.StringInterner;
 import org.gradle.api.internal.file.collections.DefaultDirectoryFileTreeFactory;
 import org.gradle.api.internal.file.collections.DirectoryFileTreeFactory;
@@ -64,7 +65,8 @@ import static org.gradle.util.TestUtil.objectFactory;
 public class TestFiles {
     private static final FileSystem FILE_SYSTEM = NativeServicesTestFixture.getInstance().get(FileSystem.class);
     private static final DefaultFileLookup FILE_LOOKUP = new DefaultFileLookup();
-    private static final DefaultExecActionFactory EXEC_FACTORY = DefaultExecActionFactory.of(resolver(), fileCollectionFactory(), new DefaultExecutorFactory());
+    private static final DefaultExecActionFactory EXEC_FACTORY =
+        DefaultExecActionFactory.of(resolver(), fileCollectionFactory(), new DefaultExecutorFactory(), TmpDirTemporaryFileProvider.createLegacy());
 
     public static FileCollectionInternal empty() {
         return fileCollectionFactory().empty();
@@ -164,7 +166,8 @@ public class TestFiles {
             fileCollectionFactory(basedDir),
             fileSystem,
             getPatternSetFactory(),
-            deleter()
+            deleter(),
+            documentationRegistry()
         );
     }
 
@@ -254,7 +257,15 @@ public class TestFiles {
         return PatternSets.getNonCachingPatternSetFactory();
     }
 
+    public static DocumentationRegistry documentationRegistry() {
+        return new DocumentationRegistry();
+    }
+
     public static String systemSpecificAbsolutePath(String path) {
         return new File(path).getAbsolutePath();
+    }
+
+    public static TmpDirTemporaryFileProvider tmpDirTemporaryFileProvider(File baseDir) {
+        return TmpDirTemporaryFileProvider.createFromCustomBase(() -> baseDir);
     }
 }

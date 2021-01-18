@@ -16,8 +16,9 @@
 
 package org.gradle.integtests.tooling.r112
 
-
+import org.gradle.integtests.tooling.fixture.TargetGradleVersion
 import org.gradle.integtests.tooling.fixture.ToolingApiSpecification
+import org.gradle.integtests.tooling.fixture.ToolingApiVersion
 import org.gradle.tooling.model.gradle.ProjectPublications
 
 class PublicationsCrossVersionSpec extends ToolingApiSpecification {
@@ -43,6 +44,8 @@ class PublicationsCrossVersionSpec extends ToolingApiSpecification {
         publications.publications.empty
     }
 
+    @ToolingApiVersion(">=3.0")
+    @TargetGradleVersion(">=3.0 <7.0")
     def "Ivy repository based publication"() {
         settingsFile << "rootProject.name = 'test.project'"
         buildFile <<
@@ -70,73 +73,6 @@ uploadArchives {
             id.group == "test.group"
             id.name == "test.project"
             id.version == "1.0"
-        }
-    }
-
-    def "Maven repository based publication with coordinates inferred from project"() {
-        settingsFile << "rootProject.name = 'test.project'"
-        buildFile <<
-"""
-apply plugin: "maven"
-
-version = 1.0
-group = "test.group"
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository(url: uri("maven-repo"))
-        }
-    }
-}
-"""
-
-        when:
-        ProjectPublications publications = withConnection { connection ->
-            connection.getModel(ProjectPublications)
-        }
-
-        then:
-        publications.publications.size() == 1
-        with(publications.publications.iterator().next()) {
-            id.group == "test.group"
-            id.name == "test.project"
-            id.version == "1.0"
-        }
-    }
-
-    def "Maven repository based publication with coordinates inferred from POM configuration"() {
-        settingsFile << "rootProject.name = 'test.project'"
-        buildFile <<
-                """
-apply plugin: "maven"
-
-version = 1.0
-group = "test.group"
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository(url: uri("maven-repo"))
-            pom.groupId = "test.groupId"
-            pom.artifactId = "test.artifactId"
-            pom.version = "1.1"
-        }
-    }
-}
-"""
-
-        when:
-        ProjectPublications publications = withConnection { connection ->
-            connection.getModel(ProjectPublications)
-        }
-
-        then:
-        publications.publications.size() == 1
-        with(publications.publications.iterator().next()) {
-            id.group == "test.groupId"
-            id.name == "test.artifactId"
-            id.version == "1.1"
         }
     }
 

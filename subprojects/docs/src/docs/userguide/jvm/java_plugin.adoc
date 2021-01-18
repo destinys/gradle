@@ -83,12 +83,6 @@ _Depends on_: `testClasses`, and all tasks which produce the test runtime classp
 +
 Runs the unit tests using JUnit or TestNG.
 
-`uploadArchives` — link:{groovyDslPath}/org.gradle.api.tasks.Upload.html[Upload]::
-_Depends on_: `jar`, and any other task that produces an artifact attached to the `archives` configuration
-+
-Uploads artifacts in the `archives` configuration — including the production JAR file — to the configured repositories.
-This task is _deprecated_, you should use one of the <<publishing_ivy.adoc#publishing_ivy,Ivy>> or <<publishing_maven.adoc#publishing_maven,Maven>> publishing plugins instead.
-
 `clean` — link:{groovyDslPath}/org.gradle.api.tasks.Delete.html[Delete]::
 Deletes the project build directory.
 
@@ -238,7 +232,7 @@ _Default value_: `src/$name/java`, e.g. _src/main/java_
 +
 The source directories containing the Java source files of this source set.  You can set this to any value that is described in <<working_with_files.adoc#sec:specifying_multiple_files,this section>>.
 
-`java.outputDir` — `File`::
+`java.destinationDirectory` — `DirectoryProperty`::
 _Default value_: `$buildDir/classes/java/$name`, e.g. _build/classes/java/main_
 +
 The directory to generate compiled Java sources into. You can set this to any value that is described in <<working_with_files.adoc#sec:single_file_paths,this section>>.
@@ -355,7 +349,7 @@ Runtime only dependencies for running tests.
 Runtime classpath for running tests. Used by task `test`.
 
 `archives`::
-Artifacts (e.g. jars) produced by this project. Used by task `uploadArchives`.
+Artifacts (e.g. jars) produced by this project. Used by Gradle to determine "default" tasks to execute when building.
 
 `default` extends `runtimeClasspath`::
 The default configuration used by a project dependency on this project. Contains the artifacts and dependencies required by this project at runtime.

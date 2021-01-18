@@ -64,7 +64,6 @@ public interface ProviderFactory {
      * @return The provider. Never returns null.
      * @since 6.1
      */
-    @Incubating
     Provider<String> environmentVariable(String variableName);
 
     /**
@@ -77,7 +76,6 @@ public interface ProviderFactory {
      * @return The provider. Never returns null.
      * @since 6.1
      */
-    @Incubating
     Provider<String> environmentVariable(Provider<String> variableName);
 
     /**
@@ -90,7 +88,6 @@ public interface ProviderFactory {
      * @return the provider for the system property, never returns null
      * @since 6.1
      */
-    @Incubating
     Provider<String> systemProperty(String propertyName);
 
     /**
@@ -103,7 +100,6 @@ public interface ProviderFactory {
      * @return the provider for the system property, never returns null
      * @since 6.1
      */
-    @Incubating
     Provider<String> systemProperty(Provider<String> propertyName);
 
     /**
@@ -116,7 +112,6 @@ public interface ProviderFactory {
      * @return the provider for the Gradle property, never returns null
      * @since 6.2
      */
-    @Incubating
     Provider<String> gradleProperty(String propertyName);
 
     /**
@@ -129,7 +124,6 @@ public interface ProviderFactory {
      * @return the provider for the Gradle property, never returns null
      * @since 6.2
      */
-    @Incubating
     Provider<String> gradleProperty(Provider<String> propertyName);
 
     /**
@@ -146,7 +140,6 @@ public interface ProviderFactory {
      *
      * @since 6.1
      */
-    @Incubating
     FileContents fileContents(RegularFile file);
 
     /**
@@ -163,7 +156,6 @@ public interface ProviderFactory {
      *
      * @since 6.1
      */
-    @Incubating
     FileContents fileContents(Provider<RegularFile> file);
 
     /**
@@ -208,7 +200,6 @@ public interface ProviderFactory {
      *
      * @since 6.6
      */
-    @Incubating
     <T extends Credentials> Provider<T> credentials(Class<T> credentialsType, String identity);
 
     /**
@@ -235,7 +226,6 @@ public interface ProviderFactory {
      *
      * @since 6.6
      */
-    @Incubating
     <T extends Credentials> Provider<T> credentials(Class<T> credentialsType, Provider<String> identity);
 
     /**
@@ -255,6 +245,5 @@ public interface ProviderFactory {
      *
      * @since 6.6
      */
-    @Incubating
     <A, B, R> Provider<R> zip(Provider<A> first, Provider<B> second, BiFunction<A, B, R> combiner);
 }

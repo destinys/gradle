@@ -24,13 +24,11 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.internal.project.taskfactory.TaskIdentity
 import org.gradle.api.internal.tasks.InputChangesAwareTaskAction
-import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.AbstractTaskTest
 import org.gradle.api.tasks.TaskExecutionException
 import org.gradle.api.tasks.TaskInstantiationException
 import org.gradle.internal.Actions
 import org.gradle.internal.event.ListenerManager
-import org.gradle.internal.logging.slf4j.ContextAwareTaskLogger
 import spock.lang.Issue
 
 import java.util.concurrent.Callable
@@ -53,7 +51,7 @@ class DefaultTaskTest extends AbstractTaskTest {
         Thread.currentThread().contextClassLoader = cl
     }
 
-    AbstractTask getTask() {
+    DefaultTask getTask() {
         defaultTask
     }
 
@@ -523,18 +521,6 @@ class DefaultTaskTest extends AbstractTaskTest {
 
         then:
         task.actions[0].displayName == "Execute unnamed action"
-    }
-
-    def "can rewrite task logger warnings"() {
-        given:
-        def rewriter = Mock(ContextAwareTaskLogger.MessageRewriter)
-
-        when:
-        task.setLoggerMessageRewriter(rewriter)
-        task.logger.warn("test")
-
-        then:
-        1 * rewriter.rewrite(LogLevel.WARN, "test")
     }
 }
 

@@ -19,7 +19,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.gradle.api.Action;
-import org.gradle.api.Incubating;
 import org.gradle.api.InvalidUserCodeException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -56,7 +55,6 @@ import org.gradle.api.tasks.scala.IncrementalCompileOptions;
 import org.gradle.api.tasks.scala.ScalaCompile;
 import org.gradle.api.tasks.scala.ScalaDoc;
 import org.gradle.jvm.tasks.Jar;
-import org.gradle.language.scala.internal.toolchain.DefaultScalaToolProvider;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -75,7 +73,7 @@ public class ScalaBasePlugin implements Plugin<Project> {
      *
      * @since 6.0
      */
-    public static final String DEFAULT_ZINC_VERSION = DefaultScalaToolProvider.DEFAULT_ZINC_VERSION;
+    public static final String DEFAULT_ZINC_VERSION = "1.3.5";
     private static final String DEFAULT_SCALA_ZINC_VERSION = "2.12";
 
     @VisibleForTesting
@@ -86,9 +84,7 @@ public class ScalaBasePlugin implements Plugin<Project> {
      *
      * @since 6.4
      */
-    @Incubating
     public static final String SCALA_COMPILER_PLUGINS_CONFIGURATION_NAME = "scalaCompilerPlugins";
-
 
     private final ObjectFactory objectFactory;
     private final JvmEcosystemUtilities jvmEcosystemUtilities;

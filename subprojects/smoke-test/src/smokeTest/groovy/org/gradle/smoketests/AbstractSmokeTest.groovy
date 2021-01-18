@@ -52,6 +52,7 @@ abstract class AbstractSmokeTest extends Specification {
     protected static final String AGP_4_0_ITERATION_MATCHER = ".*agp=4\\.0\\..*"
     protected static final String AGP_4_1_ITERATION_MATCHER = ".*agp=4\\.1\\..*"
     protected static final String AGP_4_2_ITERATION_MATCHER = ".*agp=4\\.2\\..*"
+    protected static final String AGP_7_ITERATION_MATCHER = ".*agp=7\\..*"
 
     static class TestedVersions {
         /**
@@ -126,7 +127,7 @@ abstract class AbstractSmokeTest extends Specification {
         static protobufTools = "3.13.0"
 
         // https://plugins.gradle.org/plugin/org.gradle.test-retry
-        static testRetryPlugin = "1.2.0"
+        static testRetryPlugin = "1.1.9"
 
         // https://plugins.gradle.org/plugin/com.jfrog.artifactory
         static artifactoryPlugin = "4.18.0"

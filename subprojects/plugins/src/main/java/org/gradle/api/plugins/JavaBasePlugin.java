@@ -18,7 +18,6 @@ package org.gradle.api.plugins;
 
 import com.google.common.collect.ImmutableSet;
 import org.gradle.api.Action;
-import org.gradle.api.Incubating;
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
@@ -57,6 +56,7 @@ import org.gradle.jvm.toolchain.JavaToolchainSpec;
 import org.gradle.jvm.toolchain.internal.DefaultJavaToolchainService;
 import org.gradle.jvm.toolchain.internal.DefaultToolchainSpec;
 import org.gradle.jvm.toolchain.internal.JavaToolchainQueryService;
+import org.gradle.jvm.toolchain.internal.ToolchainSpecInternal;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.language.jvm.tasks.ProcessResources;
 
@@ -86,7 +86,6 @@ public class JavaBasePlugin implements Plugin<Project> {
      *
      * @since 5.6
      */
-    @Incubating
     public static final String COMPILE_CLASSPATH_PACKAGING_SYSTEM_PROPERTY = "org.gradle.java.compile-classpath-packaging";
 
     /**
@@ -129,7 +128,6 @@ public class JavaBasePlugin implements Plugin<Project> {
         configureTest(project, javaConvention);
         configureBuildNeeded(project);
         configureBuildDependents(project);
-        bridgeToSoftwareModelIfNecessary(projectInternal);
     }
 
     private JavaPluginConvention addExtensions(final ProjectInternal project) {
@@ -141,12 +139,6 @@ public class JavaBasePlugin implements Plugin<Project> {
         project.getExtensions().add(JavaInstallationRegistry.class, "javaInstalls", javaInstallationRegistry);
         project.getExtensions().create(JavaToolchainService.class, "javaToolchains", DefaultJavaToolchainService.class, getJavaToolchainQueryService());
         return javaConvention;
-    }
-
-    private void bridgeToSoftwareModelIfNecessary(ProjectInternal project) {
-        project.addRuleBasedPluginListener(targetProject -> {
-            targetProject.getPluginManager().apply(JavaBasePluginRules.class);
-        });
     }
 
     private void configureSourceSetDefaults(final JavaPluginConvention pluginConvention) {
@@ -226,9 +218,7 @@ public class JavaBasePlugin implements Plugin<Project> {
     }
 
     private void defineConfigurationsForSourceSet(SourceSet sourceSet, ConfigurationContainer configurations) {
-        String compileConfigurationName = sourceSet.getCompileConfigurationName();
         String implementationConfigurationName = sourceSet.getImplementationConfigurationName();
-        String runtimeConfigurationName = sourceSet.getRuntimeConfigurationName();
         String runtimeOnlyConfigurationName = sourceSet.getRuntimeOnlyConfigurationName();
         String compileOnlyConfigurationName = sourceSet.getCompileOnlyConfigurationName();
         String compileClasspathConfigurationName = sourceSet.getCompileClasspathConfigurationName();
@@ -238,21 +228,11 @@ public class JavaBasePlugin implements Plugin<Project> {
         String runtimeElementsConfigurationName = sourceSet.getRuntimeElementsConfigurationName();
         String sourceSetName = sourceSet.toString();
 
-        DeprecatableConfiguration compileConfiguration = (DeprecatableConfiguration) configurations.maybeCreate(compileConfigurationName);
-        compileConfiguration.setVisible(false);
-        compileConfiguration.setDescription("Dependencies for " + sourceSetName + " (deprecated, use '" + implementationConfigurationName + "' instead).");
-
         Configuration implementationConfiguration = configurations.maybeCreate(implementationConfigurationName);
         implementationConfiguration.setVisible(false);
         implementationConfiguration.setDescription("Implementation only dependencies for " + sourceSetName + ".");
         implementationConfiguration.setCanBeConsumed(false);
         implementationConfiguration.setCanBeResolved(false);
-        implementationConfiguration.extendsFrom(compileConfiguration);
-
-        DeprecatableConfiguration runtimeConfiguration = (DeprecatableConfiguration) configurations.maybeCreate(runtimeConfigurationName);
-        runtimeConfiguration.setVisible(false);
-        runtimeConfiguration.extendsFrom(compileConfiguration);
-        runtimeConfiguration.setDescription("Runtime dependencies for " + sourceSetName + " (deprecated, use '" + runtimeOnlyConfigurationName + "' instead).");
 
         DeprecatableConfiguration compileOnlyConfiguration = (DeprecatableConfiguration) configurations.maybeCreate(compileOnlyConfigurationName);
         compileOnlyConfiguration.setVisible(false);
@@ -285,23 +265,15 @@ public class JavaBasePlugin implements Plugin<Project> {
         runtimeClasspathConfiguration.setCanBeConsumed(false);
         runtimeClasspathConfiguration.setCanBeResolved(true);
         runtimeClasspathConfiguration.setDescription("Runtime classpath of " + sourceSetName + ".");
-        runtimeClasspathConfiguration.extendsFrom(runtimeOnlyConfiguration, runtimeConfiguration, implementationConfiguration);
+        runtimeClasspathConfiguration.extendsFrom(runtimeOnlyConfiguration, implementationConfiguration);
         jvmPluginServices.configureAsRuntimeClasspath(runtimeClasspathConfiguration);
 
         sourceSet.setCompileClasspath(compileClasspathConfiguration);
         sourceSet.setRuntimeClasspath(sourceSet.getOutput().plus(runtimeClasspathConfiguration));
         sourceSet.setAnnotationProcessorPath(annotationProcessorConfiguration);
 
-        compileConfiguration.deprecateForDeclaration(implementationConfigurationName);
-        compileConfiguration.deprecateForConsumption(apiElementsConfigurationName);
-        compileConfiguration.deprecateForResolution(compileClasspathConfigurationName);
-
         compileOnlyConfiguration.deprecateForConsumption(apiElementsConfigurationName);
         compileOnlyConfiguration.deprecateForResolution(compileClasspathConfigurationName);
-
-        runtimeConfiguration.deprecateForDeclaration(runtimeOnlyConfigurationName);
-        runtimeConfiguration.deprecateForConsumption(runtimeElementsConfigurationName);
-        runtimeConfiguration.deprecateForResolution(runtimeClasspathConfigurationName);
 
         compileClasspathConfiguration.deprecateForDeclaration(implementationConfigurationName, compileOnlyConfigurationName);
         runtimeClasspathConfiguration.deprecateForDeclaration(implementationConfigurationName, compileOnlyConfigurationName, runtimeOnlyConfigurationName);
@@ -342,7 +314,7 @@ public class JavaBasePlugin implements Plugin<Project> {
     }
 
     private void checkToolchainAndCompatibilityUsage(JavaPluginExtension javaExtension, Supplier<JavaVersion> rawJavaVersionSupplier) {
-        if (((DefaultToolchainSpec) javaExtension.getToolchain()).isConfigured() && rawJavaVersionSupplier.get() != null) {
+        if (((ToolchainSpecInternal) javaExtension.getToolchain()).isConfigured() && rawJavaVersionSupplier.get() != null) {
             throw new InvalidUserDataException("The new Java toolchain feature cannot be used at the project level in combination with source and/or target compatibility");
         }
     }
@@ -393,6 +365,7 @@ public class JavaBasePlugin implements Plugin<Project> {
         return toolMapper.apply(service, extension.getToolchain());
     }
 
+    @Deprecated
     @Inject
     protected JavaToolchainQueryService getJavaToolchainQueryService() {
         throw new UnsupportedOperationException();

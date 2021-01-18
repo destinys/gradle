@@ -16,8 +16,8 @@
 
 package org.gradle.api.tasks.testing;
 
-import org.gradle.api.Incubating;
 import org.gradle.internal.HasInternalProtocol;
+import org.gradle.internal.scan.UsedByScanPlugin;
 
 import javax.annotation.Nullable;
 
@@ -40,7 +40,6 @@ public interface TestDescriptor {
      * @return the name for display.
      * @since 6.1
      */
-    @Incubating
     String getDisplayName();
 
     /**
@@ -49,6 +48,7 @@ public interface TestDescriptor {
      * @return The class name. May return null.
      */
     @Nullable
+    @UsedByScanPlugin("test-retry")
     String getClassName();
 
     /**

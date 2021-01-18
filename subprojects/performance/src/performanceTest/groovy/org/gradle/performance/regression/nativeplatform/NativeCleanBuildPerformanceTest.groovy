@@ -20,17 +20,17 @@ import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.SLOW
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 class NativeCleanBuildPerformanceTest extends AbstractCrossVersionPerformanceTest {
     def setup() {
         runner.minimumBaseVersion = '4.1' // minimum version that contains new C++ plugins
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["7.0-20210111230356+0000"]
     }
 
     @RunFor([
-        @Scenario(type = SLOW, operatingSystems = [LINUX],
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX],
             testProjects =  [
                 'smallNative',
                 'mediumNative',
@@ -62,7 +62,7 @@ class NativeCleanBuildPerformanceTest extends AbstractCrossVersionPerformanceTes
     }
 
     @RunFor([
-        @Scenario(type = SLOW, operatingSystems = [LINUX], testProjects =  ['manyProjectsNative'])
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects =  ['manyProjectsNative'])
     ])
     def "clean assemble (native, parallel)"() {
         given:

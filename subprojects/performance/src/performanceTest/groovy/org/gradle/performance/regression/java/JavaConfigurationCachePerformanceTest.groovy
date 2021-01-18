@@ -27,7 +27,8 @@ import spock.lang.Unroll
 
 import java.nio.file.Files
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 import static org.junit.Assert.assertTrue
 
@@ -36,18 +37,20 @@ class JavaConfigurationCachePerformanceTest extends AbstractCrossVersionPerforma
 
     def setup() {
         stateDirectory = temporaryFolder.file(".gradle/configuration-cache")
+        runner.targetVersions = ["7.0-20201216230041+0000"]
+        runner.minimumBaseVersion = "6.6"
     }
 
     @RunFor([
-        @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc", "smallJavaMultiProject"],
-            iterationMatcher = ".*with hot.*"),
-        @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc"], iterationMatcher = ".*with cold.*")
+        @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["smallJavaMultiProject"], iterationMatcher = ".*with hot.*"),
+        @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc"], iterationMatcher = "assemble loading configuration cache state with cold daemon"),
+        @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc"], iterationMatcher = "assemble storing configuration cache state with hot daemon"),
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc"], iterationMatcher = "assemble storing configuration cache state with cold daemon"),
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeJavaMultiProjectNoBuildSrc"], iterationMatcher = "assemble loading configuration cache state with hot daemon")
     ])
     @Unroll
     def "assemble #action configuration cache state with #daemon daemon"() {
         given:
-        runner.targetVersions = ["6.8-20201116162838+0000"]
-        runner.minimumBaseVersion = "6.6"
         runner.tasksToRun = ["assemble"]
         runner.args = ["-D${ConfigurationCacheOption.PROPERTY_NAME}=true"]
 

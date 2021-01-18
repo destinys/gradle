@@ -17,12 +17,9 @@
 package org.gradle.internal.execution.steps;
 
 import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.internal.execution.AfterPreviousExecutionContext;
-import org.gradle.internal.execution.Result;
-import org.gradle.internal.execution.Step;
 import org.gradle.internal.execution.UnitOfWork;
 import org.gradle.internal.execution.UnitOfWork.Identity;
-import org.gradle.internal.execution.WorkspaceContext;
+import org.gradle.internal.execution.WorkValidationContext;
 import org.gradle.internal.execution.history.AfterPreviousExecutionState;
 import org.gradle.internal.execution.history.ExecutionHistoryStore;
 import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint;
@@ -52,6 +49,11 @@ public class LoadExecutionStateStep<C extends WorkspaceContext, R extends Result
             @Override
             public Optional<String> getRebuildReason() {
                 return context.getRebuildReason();
+            }
+
+            @Override
+            public WorkValidationContext getValidationContext() {
+                return context.getValidationContext();
             }
 
             @Override

@@ -1,20 +1,3 @@
-/*
- * Copyright 2010 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-import gradlebuild.cleanup.WhenNotEmpty
-
 plugins {
     id("gradlebuild.distribution.api-java")
 }
@@ -46,6 +29,7 @@ dependencies {
     implementation(project(":build-cache-packaging"))
     implementation(project(":core-api"))
     implementation(project(":files"))
+    implementation(project(":file-temp"))
     implementation(project(":file-collections"))
     implementation(project(":process-services"))
     implementation(project(":jvm-services"))
@@ -102,10 +86,18 @@ dependencies {
     testFixturesApi(project(":native")) {
         because("test fixtures expose FileSystem")
     }
-    testFixturesImplementation(project(":file-collections"))
-    testFixturesImplementation(project(":native"))
-    testFixturesImplementation(project(":resources"))
-    testFixturesImplementation(project(":process-services"))
+    testFixturesApi(project(":file-collections")) {
+        because("test fixtures expose file collection types")
+    }
+    testFixturesApi(project(":file-temp")) {
+        because("test fixtures expose temp file types")
+    }
+    testFixturesApi(project(":resources")) {
+        because("test fixtures expose file resource types")
+    }
+    testFixturesApi(project(":process-services")) {
+        because("test fixtures expose exec handler types")
+    }
     testFixturesImplementation(project(":messaging"))
     testFixturesImplementation(project(":persistent-cache"))
     testFixturesImplementation(project(":snapshots"))
@@ -163,7 +155,7 @@ strictCompile {
 }
 
 classycle {
-    excludePatterns.set(listOf("org/gradle/**"))
+    excludePatterns.add("org/gradle/**")
 }
 
 tasks.test {
@@ -174,6 +166,5 @@ tasks.compileTestGroovy {
     groovyOptions.fork("memoryInitialSize" to "128M", "memoryMaximumSize" to "1G")
 }
 
-testFilesCleanup {
-    policy.set(WhenNotEmpty.REPORT)
-}
+integTest.usesSamples.set(true)
+testFilesCleanup.reportOnly.set(true)

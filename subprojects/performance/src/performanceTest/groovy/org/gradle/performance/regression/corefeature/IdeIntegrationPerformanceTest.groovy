@@ -20,18 +20,18 @@ import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_DAY
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
-@RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["largeMonolithicJavaProject", "largeJavaMultiProject"])
-)
 class IdeIntegrationPerformanceTest extends AbstractCrossVersionPerformanceTest {
 
+    @RunFor(
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeMonolithicJavaProject", "largeJavaMultiProject"])
+    )
     def "eclipse"() {
         given:
         runner.tasksToRun = ['eclipse']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
 
         when:
         def result = runner.run()
@@ -40,10 +40,13 @@ class IdeIntegrationPerformanceTest extends AbstractCrossVersionPerformanceTest 
         result.assertCurrentVersionHasNotRegressed()
     }
 
+    @RunFor(
+        @Scenario(type = PER_DAY, operatingSystems = [LINUX], testProjects = ["largeMonolithicJavaProject", "largeJavaMultiProject"])
+    )
     def "idea"() {
         given:
         runner.tasksToRun = ['idea']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
 
         when:
         def result = runner.run()

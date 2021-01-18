@@ -15,6 +15,7 @@
  */
 package org.gradle.internal.management;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
@@ -27,9 +28,12 @@ import org.gradle.api.artifacts.ComponentMetadataRule;
 import org.gradle.api.artifacts.dsl.ComponentMetadataHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
 import org.gradle.api.initialization.resolve.DependencyResolutionManagement;
 import org.gradle.api.initialization.resolve.RepositoriesMode;
 import org.gradle.api.initialization.resolve.RulesMode;
+import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
+import org.gradle.api.internal.CollectionCallbackActionDecorator;
 import org.gradle.api.internal.artifacts.DependencyManagementServices;
 import org.gradle.api.internal.artifacts.DependencyResolutionServices;
 import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
@@ -44,10 +48,12 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ProviderFactory;
 import org.gradle.configuration.internal.UserCodeApplicationContext;
 import org.gradle.internal.Describables;
 import org.gradle.internal.DisplayName;
 import org.gradle.internal.lazy.Lazy;
+import org.gradle.plugin.management.PluginManagementSpec;
 
 import java.util.List;
 
@@ -62,6 +68,10 @@ public class DefaultDependencyResolutionManagement implements DependencyResoluti
     private final ComponentMetadataHandler registar = new ComponentMetadataRulesRegistar();
     private final Property<RepositoriesMode> repositoryMode;
     private final Property<RulesMode> rulesMode;
+    private final Property<String> librariesExtensionName;
+    private final Property<String> projectsExtensionName;
+    private final DefaultVersionCatalogBuilderContainer versionCatalogs;
+
     private boolean mutable = true;
 
     public DefaultDependencyResolutionManagement(UserCodeApplicationContext context,
@@ -69,11 +79,16 @@ public class DefaultDependencyResolutionManagement implements DependencyResoluti
                                                  FileResolver fileResolver,
                                                  FileCollectionFactory fileCollectionFactory,
                                                  DependencyMetaDataProvider dependencyMetaDataProvider,
-                                                 ObjectFactory objects) {
+                                                 ObjectFactory objects,
+                                                 ProviderFactory providers,
+                                                 CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
         this.context = context;
         this.repositoryMode = objects.property(RepositoriesMode.class).convention(RepositoriesMode.PREFER_PROJECT);
         this.rulesMode = objects.property(RulesMode.class).convention(RulesMode.PREFER_PROJECT);
         this.dependencyResolutionServices = Lazy.locking().of(() -> dependencyManagementServices.create(fileResolver, fileCollectionFactory, dependencyMetaDataProvider, makeUnknownProjectFinder(), RootScriptDomainObjectContext.INSTANCE));
+        this.librariesExtensionName = objects.property(String.class).convention("libs");
+        this.projectsExtensionName = objects.property(String.class).convention("projects");
+        this.versionCatalogs = objects.newInstance(DefaultVersionCatalogBuilderContainer.class, collectionCallbackActionDecorator, objects, providers, dependencyResolutionServices, context);
     }
 
     @Override
@@ -114,9 +129,34 @@ public class DefaultDependencyResolutionManagement implements DependencyResoluti
     }
 
     @Override
+    public void versionCatalogs(Action<? super MutableVersionCatalogContainer> spec) {
+        spec.execute(versionCatalogs);
+    }
+
+    @Override
+    public MutableVersionCatalogContainer getVersionCatalogs() {
+        return versionCatalogs;
+    }
+
+    @Override
     public RulesModeInternal getConfiguredRulesMode() {
         rulesMode.finalizeValue();
         return RulesModeInternal.of(rulesMode.get());
+    }
+
+    @Override
+    public Property<String> getDefaultProjectsExtensionName() {
+        return projectsExtensionName;
+    }
+
+    @Override
+    public Property<String> getDefaultLibrariesExtensionName() {
+        return librariesExtensionName;
+    }
+
+    @Override
+    public List<VersionCatalogBuilder> getDependenciesModelBuilders() {
+        return ImmutableList.copyOf(versionCatalogs);
     }
 
     @Override
@@ -182,6 +222,11 @@ public class DefaultDependencyResolutionManagement implements DependencyResoluti
 
     private static ProjectFinder makeUnknownProjectFinder() {
         return new UnknownProjectFinder("Project dependencies are not allowed in shared dependency resolution services");
+    }
+
+    @Override
+    public void setPluginsSpec(PluginManagementSpec pluginManagementSpec) {
+        this.versionCatalogs.setPlugins(pluginManagementSpec.getPlugins());
     }
 
     @Override

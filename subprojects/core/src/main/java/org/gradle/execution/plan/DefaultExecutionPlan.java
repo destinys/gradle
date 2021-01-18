@@ -28,7 +28,6 @@ import org.gradle.api.CircularReferenceException;
 import org.gradle.api.GradleException;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Task;
-import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.specs.Specs;
 import org.gradle.internal.Pair;
@@ -74,10 +73,15 @@ public class DefaultExecutionPlan implements ExecutionPlan {
     private final List<Node> executionQueue = new LinkedList<>();
     private final Set<ResourceLock> projectLocks = new HashSet<>();
     private final FailureCollector failureCollector = new FailureCollector();
+    private final String displayName;
     private final TaskNodeFactory taskNodeFactory;
     private final TaskDependencyResolver dependencyResolver;
+    private final NodeValidator nodeValidator;
+    private final RelatedLocations producedLocations;
+    private final RelatedLocations consumedLocations;
     private Spec<? super Task> filter = Specs.satisfyAll();
 
+    private boolean invalidNodeRunning;
     private boolean continueOnFailure;
 
     private final Set<Node> runningNodes = newIdentityHashSet();
@@ -86,19 +90,28 @@ public class DefaultExecutionPlan implements ExecutionPlan {
     private final Map<Pair<Node, Node>, Boolean> reachableCache = new HashMap<>();
     private final List<Node> dependenciesWhichRequireMonitoring = new ArrayList<>();
     private boolean maybeNodesReady;
-    private final GradleInternal gradle;
 
     private boolean buildCancelled;
 
-    public DefaultExecutionPlan(GradleInternal gradle, TaskNodeFactory taskNodeFactory, TaskDependencyResolver dependencyResolver) {
-        this.gradle = gradle;
+    public DefaultExecutionPlan(
+        String displayName,
+        TaskNodeFactory taskNodeFactory,
+        TaskDependencyResolver dependencyResolver,
+        NodeValidator nodeValidator,
+        RelatedLocations producedLocations,
+        RelatedLocations consumedLocations
+    ) {
+        this.displayName = displayName;
         this.taskNodeFactory = taskNodeFactory;
         this.dependencyResolver = dependencyResolver;
+        this.nodeValidator = nodeValidator;
+        this.producedLocations = producedLocations;
+        this.consumedLocations = consumedLocations;
     }
 
     @Override
     public String getDisplayName() {
-        return gradle.getIdentityPath().toString();
+        return displayName;
     }
 
     @Override
@@ -106,6 +119,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         return nodeMapping.get(task);
     }
 
+    @Override
     public void addNodes(Collection<? extends Node> nodes) {
         Deque<Node> queue = new ArrayDeque<>(nodes);
         for (Node node : nodes) {
@@ -118,6 +132,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         doAddNodes(queue);
     }
 
+    @Override
     public void addEntryTasks(Collection<? extends Task> tasks) {
         final Deque<Node> queue = new ArrayDeque<>();
 
@@ -240,6 +255,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         }
     }
 
+    @Override
     public void determineExecutionPlan() {
         LinkedList<NodeInVisitingSegment> nodeQueue = newLinkedList(
             Iterables.transform(entryNodes, new Function<Node, NodeInVisitingSegment>() {
@@ -473,6 +489,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         throw new CircularReferenceException(String.format("Circular dependency between the following tasks:%n%s", writer.toString()));
     }
 
+    @Override
     public void clear() {
         taskNodeFactory.clear();
         dependencyResolver.clear();
@@ -485,6 +502,8 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         reachableCache.clear();
         dependenciesWhichRequireMonitoring.clear();
         runningNodes.clear();
+        producedLocations.clear();
+        consumedLocations.clear();
     }
 
     @Override
@@ -492,13 +511,15 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         return nodeMapping.getTasks();
     }
 
+    @Override
     public List<Node> getScheduledNodes() {
         return ImmutableList.copyOf(nodeMapping.nodes);
     }
 
+    @Override
     public List<Node> getScheduledNodesPlusDependencies() {
         Set<Node> nodes = nodeMapping.nodes;
-        ImmutableList.Builder<Node> builder = ImmutableList.<Node>builder();
+        ImmutableList.Builder<Node> builder = ImmutableList.builder();
         for (Node node : dependenciesWhichRequireMonitoring) {
             if (!nodes.contains(node)) {
                 builder.add(node);
@@ -518,10 +539,12 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         return builder.build();
     }
 
+    @Override
     public void useFilter(Spec<? super Task> filter) {
         this.filter = filter;
     }
 
+    @Override
     public void setContinueOnFailure(boolean continueOnFailure) {
         this.continueOnFailure = continueOnFailure;
     }
@@ -560,6 +583,9 @@ public class DefaultExecutionPlan implements ExecutionPlan {
 
                 if (node.allDependenciesSuccessful()) {
                     node.startExecution(this::recordNodeExecutionStarted);
+                    if (mutations.hasValidationProblem) {
+                        invalidNodeRunning = true;
+                    }
                 } else {
                     node.skipExecution(this::recordNodeCompleted);
                 }
@@ -583,8 +609,10 @@ public class DefaultExecutionPlan implements ExecutionPlan {
             LOGGER.debug("Cannot acquire worker lease lock for node {}", node);
             return false;
             // TODO: convert output file checks to a resource lock
-        } else if (!canRunWithCurrentlyExecutedNodes(node, mutations)) {
+        } else if (!canRunWithCurrentlyExecutedNodes(mutations)) {
             LOGGER.debug("Node {} cannot run with currently running nodes {}", node, runningNodes);
+            return false;
+        } else if (doesDestroyNotYetConsumedOutputOfAnotherNode(node, mutations.destroyablePaths)) {
             return false;
         }
         return true;
@@ -624,6 +652,8 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         MutationInfo mutations = node.getMutationInfo();
         if (!mutations.resolved) {
             node.resolveMutations();
+            mutations.hasValidationProblem = nodeValidator.hasValidationProblems(node);
+            producedLocations.recordRelatedToNode(node, mutations.outputPaths);
         }
         return mutations;
     }
@@ -637,21 +667,27 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         return !projectLocks.isEmpty();
     }
 
-    private boolean canRunWithCurrentlyExecutedNodes(Node node, MutationInfo mutations) {
-        Set<String> candidateNodeDestroyables = mutations.destroyablePaths;
-
-        if (!runningNodes.isEmpty()) {
-            Set<String> candidateNodeOutputs = mutations.outputPaths;
-            Set<String> candidateMutations = !candidateNodeOutputs.isEmpty() ? candidateNodeOutputs : candidateNodeDestroyables;
-            if (hasNodeWithOverlappingMutations(candidateMutations)) {
+    private boolean canRunWithCurrentlyExecutedNodes(MutationInfo mutations) {
+        if (mutations.hasValidationProblem) {
+            if (!runningNodes.isEmpty()) {
+                // Invalid work is not allowed to run together with any other work
                 return false;
             }
+        } else if (invalidNodeRunning) {
+            // No new work should be started when invalid work is running
+            return false;
         }
-
-        return !doesDestroyNotYetConsumedOutputOfAnotherNode(node, candidateNodeDestroyables);
+        return !hasRunningNodeWithOverlappingMutations(mutations);
     }
 
-    private boolean hasNodeWithOverlappingMutations(Set<String> candidateMutationPaths) {
+    private boolean hasRunningNodeWithOverlappingMutations(MutationInfo mutations) {
+        if (runningNodes.isEmpty()) {
+            return false;
+        }
+        Set<String> candidateNodeOutputs = mutations.outputPaths;
+        Set<String> candidateMutationPaths = !candidateNodeOutputs.isEmpty()
+            ? candidateNodeOutputs
+            : mutations.destroyablePaths;
         if (!candidateMutationPaths.isEmpty()) {
             for (Node runningNode : runningNodes) {
                 MutationInfo runningMutations = runningNode.getMutationInfo();
@@ -791,6 +827,7 @@ public class DefaultExecutionPlan implements ExecutionPlan {
         } finally {
             unlockProjectFor(node);
             unlockSharedResourcesFor(node);
+            invalidNodeRunning = false;
         }
     }
 

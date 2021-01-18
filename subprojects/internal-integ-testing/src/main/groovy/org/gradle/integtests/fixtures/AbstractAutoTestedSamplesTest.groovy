@@ -20,20 +20,12 @@ class AbstractAutoTestedSamplesTest extends AbstractIntegrationTest {
 
     def util = new AutoTestedSamplesUtil()
 
-    static void assertDeclaredAsInput(String dir) {
-        String inputs = System.getProperty("declaredSampleInputs")
-        assert inputs: "Must declare samples dir as inputs!"
-        assert inputs.split(";").contains(dir): "Must declare input: $dir"
-    }
-
     void runSamplesFrom(String dir) {
-        assertDeclaredAsInput(dir)
         util.findSamples(dir) { file, sample, tagSuffix ->
             println "Found sample: ${sample.split("\n")[0]} (...) in $file"
             def buildFile = testFile('build.gradle')
             def settingsFile = testFile('settings.gradle')
             def fileToTest = tagSuffix.contains('Settings') ? settingsFile : buildFile
-            executer.withFullDeprecationStackTraceDisabled()
             if (tagSuffix.contains('WithDeprecations')) {
                 executer.noDeprecationChecks()
             }

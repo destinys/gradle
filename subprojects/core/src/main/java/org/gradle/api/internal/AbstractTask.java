@@ -69,7 +69,8 @@ import org.gradle.internal.execution.history.changes.InputChangesInternal;
 import org.gradle.internal.extensibility.ExtensibleDynamicObject;
 import org.gradle.internal.hash.ClassLoaderHierarchyHasher;
 import org.gradle.internal.instantiation.InstanceGenerator;
-import org.gradle.internal.logging.compatbridge.LoggingManagerInternalCompatibilityBridge;
+import org.gradle.internal.logging.LoggingManagerInternal;
+import org.gradle.internal.logging.StandardOutputCapture;
 import org.gradle.internal.logging.slf4j.ContextAwareTaskLogger;
 import org.gradle.internal.logging.slf4j.DefaultContextAwareTaskLogger;
 import org.gradle.internal.metaobject.DynamicObject;
@@ -100,7 +101,7 @@ import static org.gradle.api.internal.lambdas.SerializableLambdas.factory;
 import static org.gradle.util.GUtil.uncheckedCall;
 
 /**
- * @deprecated This class will be removed in Gradle 7.0. Please use {@link org.gradle.api.DefaultTask} instead.
+ * @deprecated This class will be removed in Gradle 8.0. Please use {@link org.gradle.api.DefaultTask} instead.
  */
 @Deprecated
 public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
@@ -148,8 +149,7 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
     private final TaskOutputsInternal taskOutputs;
     private final TaskDestroyables taskDestroyables;
     private final TaskLocalStateInternal taskLocalState;
-    @SuppressWarnings("deprecation")
-    private org.gradle.logging.LoggingManagerInternal loggingManager;
+    private LoggingManagerInternal loggingManager;
 
     private Set<Provider<? extends BuildService<?>>> requiredServices;
 
@@ -464,23 +464,20 @@ public abstract class AbstractTask implements TaskInternal, DynamicObjectAware {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
-    public org.gradle.logging.LoggingManagerInternal getLogging() {
+    public org.gradle.api.logging.LoggingManager getLogging() {
+        return loggingManager();
+    }
+
+    @Override
+    public StandardOutputCapture getStandardOutputCapture() {
+        return loggingManager();
+    }
+
+    private LoggingManagerInternal loggingManager() {
         if (loggingManager == null) {
-            loggingManager = new LoggingManagerInternalCompatibilityBridge(services.getFactory(org.gradle.internal.logging.LoggingManagerInternal.class).create());
+            loggingManager = services.getFactory(org.gradle.internal.logging.LoggingManagerInternal.class).create();
         }
         return loggingManager;
-    }
-
-    @Override
-    public void setLoggerMessageRewriter(ContextAwareTaskLogger.MessageRewriter messageRewriter) {
-        logger.setMessageRewriter(messageRewriter);
-    }
-
-    @Override
-    @SuppressWarnings("deprecation")
-    public org.gradle.logging.StandardOutputCapture getStandardOutputCapture() {
-        return getLogging();
     }
 
     @Override

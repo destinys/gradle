@@ -119,6 +119,7 @@ import org.gradle.internal.operations.BuildOperationDescriptor;
 import org.gradle.internal.operations.BuildOperationExecutor;
 import org.gradle.internal.operations.CallableBuildOperation;
 import org.gradle.internal.reflect.Instantiator;
+import org.gradle.internal.resolve.ModuleVersionNotFoundException;
 import org.gradle.internal.typeconversion.NotationParser;
 import org.gradle.util.CollectionUtils;
 import org.gradle.util.ConfigureUtil;
@@ -234,6 +235,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
     private ConfigurationInternal consistentResolutionSource;
     private String consistentResolutionReason;
+    private ExtraExecutionGraphDependenciesResolverFactory dependenciesResolverFactory;
 
     public DefaultConfiguration(DomainObjectContext domainObjectContext,
                                 String name,
@@ -732,13 +734,20 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
     @Override
     public ResolveException maybeAddContext(ResolveException e) {
+        return failuresWithHint(e.getCauses()).orElse(e);
+    }
+
+    private Optional<ResolveException> failuresWithHint(Collection<? extends Throwable> causes) {
         if (ignoresSettingsRepositories()) {
-            return new ResolveExceptionWithHints(getDisplayName(), e.getCauses(),
-                "The project declares repositories, effectively ignoring the repositories you have declared in the settings.",
-                "You can figure out how project repositories are declared by configuring your build to fail on project repositories.",
-                "See " + documentationRegistry.getDocumentationFor("declaring_repositories", "sub:fail_build_on_project_repositories") + " for details.");
+            boolean hasModuleNotFound = causes.stream().anyMatch(ModuleVersionNotFoundException.class::isInstance);
+            if (hasModuleNotFound) {
+                return Optional.of(new ResolveExceptionWithHints(getDisplayName(), causes,
+                    "The project declares repositories, effectively ignoring the repositories you have declared in the settings.",
+                    "You can figure out how project repositories are declared by configuring your build to fail on project repositories.",
+                    "See " + documentationRegistry.getDocumentationFor("declaring_repositories", "sub:fail_build_on_project_repositories") + " for details."));
+            }
         }
-        return e;
+        return Optional.empty();
     }
 
     private boolean ignoresSettingsRepositories() {
@@ -810,8 +819,11 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
     @Override
     public ExtraExecutionGraphDependenciesResolverFactory getDependenciesResolver() {
-        return new DefaultExtraExecutionGraphDependenciesResolverFactory(new DefaultResolutionResultProvider(), owner, calculatedValueContainerFactory,
-            (attributes, filter) -> new ConfigurationFileCollection(new SelectedArtifactsProvider(), Specs.satisfyAll(), attributes, filter, false, false, new DefaultResolutionHost()));
+        if (dependenciesResolverFactory == null) {
+            dependenciesResolverFactory = new DefaultExtraExecutionGraphDependenciesResolverFactory(new DefaultResolutionResultProvider(), owner, calculatedValueContainerFactory,
+                (attributes, filter) -> new ConfigurationFileCollection(new SelectedArtifactsProvider(), Specs.satisfyAll(), attributes, filter, false, false, new DefaultResolutionHost()));
+        }
+        return dependenciesResolverFactory;
     }
 
     private ResolverResults getResultsForBuildDependencies() {
@@ -1009,6 +1021,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
         return this;
     }
 
+    @Deprecated
     @Override
     public String getUploadTaskName() {
         return Configurations.uploadTaskName(getName());
@@ -1398,6 +1411,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
             return;
         }
         if (failures.size() == 1) {
+            failuresWithHint(failures).ifPresent(UncheckedException::throwAsUncheckedException);
             Throwable failure = failures.iterator().next();
             if (failure instanceof ResolveException) {
                 throw UncheckedException.throwAsUncheckedException(failure);
@@ -1410,6 +1424,11 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
         if (!canBeResolved) {
             throw new IllegalStateException("Resolving dependency configuration '" + name + "' is not allowed as it is defined as 'canBeResolved=false'.\nInstead, a resolvable ('canBeResolved=true') dependency configuration that extends '" + name + "' should be resolved.");
         }
+    }
+
+    @Override
+    protected void assertCanCarryBuildDependencies() {
+        assertIsResolvable();
     }
 
     @Override
@@ -1658,6 +1677,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
         @Override
         public FileCollection getFiles() {
+            assertIsResolvable();
             return intrinsicFiles;
         }
 
@@ -1695,6 +1715,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
         @Override
         public ResolutionResult getResolutionResult() {
+            assertIsResolvable();
             return new LenientResolutionResult(DEFAULT_ERROR_HANDLER);
         }
 

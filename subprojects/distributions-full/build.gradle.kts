@@ -1,5 +1,3 @@
-import gradlebuild.run.tasks.RunEmbeddedGradle
-
 plugins {
     id("gradlebuild.distribution.packaging")
     id("gradlebuild.verify-build-environment")
@@ -18,14 +16,9 @@ dependencies {
     pluginsRuntimeOnly(project(":build-profile"))
     pluginsRuntimeOnly(project(":antlr"))
     pluginsRuntimeOnly(project(":enterprise"))
-
-    // The following are scheduled to be removed from the distribution completely in Gradle 7.0
-    pluginsRuntimeOnly(project(":javascript"))
-    pluginsRuntimeOnly(project(":platform-play"))
-    pluginsRuntimeOnly(project(":ide-play"))
 }
 
-tasks.register<RunEmbeddedGradle>("runDevGradle") {
+tasks.register<gradlebuild.run.tasks.RunEmbeddedGradle>("runDevGradle") {
     group = "verification"
     description = "Runs an embedded Gradle using the partial distribution for ${project.path}."
     gradleClasspath.from(configurations.runtimeClasspath.get(), tasks.runtimeApiInfoJar)

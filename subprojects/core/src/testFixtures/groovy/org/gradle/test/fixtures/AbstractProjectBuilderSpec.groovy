@@ -18,11 +18,15 @@ package org.gradle.test.fixtures
 
 import org.gradle.api.Task
 import org.gradle.api.internal.TaskInternal
+import org.gradle.api.internal.file.FileCollectionFactory
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.api.internal.tasks.TaskExecuter
 import org.gradle.api.internal.tasks.TaskStateInternal
 import org.gradle.api.internal.tasks.execution.DefaultTaskExecutionContext
+import org.gradle.api.internal.tasks.properties.DefaultTaskProperties
+import org.gradle.api.internal.tasks.properties.PropertyWalker
 import org.gradle.execution.ProjectExecutionServices
+import org.gradle.internal.execution.impl.DefaultWorkValidationContext
 import org.gradle.test.fixtures.file.CleanupTestDirectory
 import org.gradle.test.fixtures.file.TestNameTestDirectoryProvider
 import org.gradle.util.SetSystemProperties
@@ -30,6 +34,7 @@ import org.gradle.util.TestUtil
 import org.gradle.util.UsesNativeServices
 import org.junit.Rule
 import spock.lang.Specification
+
 /**
  * An abstract class for writing tests using ProjectBuilder.
  * The fixture automatically takes care of deleting files creating in the temporary project directory used by the Project instance.
@@ -59,7 +64,13 @@ abstract class AbstractProjectBuilderSpec extends Specification {
     }
 
     void execute(Task task) {
-        executionServices.get(TaskExecuter).execute((TaskInternal) task, (TaskStateInternal) task.state, new DefaultTaskExecutionContext(null))
+        def taskExecutionContext = new DefaultTaskExecutionContext(
+            null,
+            DefaultTaskProperties.resolve(executionServices.get(PropertyWalker), executionServices.get(FileCollectionFactory), task as TaskInternal),
+            new DefaultWorkValidationContext(),
+            {}
+        )
+        executionServices.get(TaskExecuter).execute((TaskInternal) task, (TaskStateInternal) task.state, taskExecutionContext)
         task.state.rethrowFailure()
     }
 }

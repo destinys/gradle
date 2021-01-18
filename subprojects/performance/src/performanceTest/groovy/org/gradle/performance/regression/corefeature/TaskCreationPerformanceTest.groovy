@@ -20,18 +20,18 @@ import org.gradle.performance.AbstractCrossVersionPerformanceTest
 import org.gradle.performance.annotations.RunFor
 import org.gradle.performance.annotations.Scenario
 
-import static org.gradle.performance.annotations.ScenarioType.TEST
+import static org.gradle.performance.annotations.ScenarioType.PER_COMMIT
 import static org.gradle.performance.results.OperatingSystem.LINUX
 
 @RunFor(
-    @Scenario(type = TEST, operatingSystems = [LINUX], testProjects = ["createLotsOfTasks"])
+    @Scenario(type = PER_COMMIT, operatingSystems = [LINUX], testProjects = ["createLotsOfTasks"])
 )
 class TaskCreationPerformanceTest extends AbstractCrossVersionPerformanceTest {
 
     def "create many tasks"() {
         given:
         runner.tasksToRun = ['help']
-        runner.targetVersions = ["6.8-20201117230037+0000"]
+        runner.targetVersions = ["7.0-20210107230045+0000"]
         runner.runs = 60
 
         when:

@@ -18,7 +18,6 @@ package org.gradle.api.model;
 
 import org.gradle.api.DomainObjectSet;
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer;
-import org.gradle.api.Incubating;
 import org.gradle.api.Named;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.NamedDomainObjectFactory;
@@ -100,7 +99,6 @@ public interface ObjectFactory {
      * @param displayName A human consumable display name for the set.
      * @since 5.0
      */
-    @Incubating
     SourceDirectorySet sourceDirectorySet(String name, String displayName);
 
     /**
@@ -108,7 +106,6 @@ public interface ObjectFactory {
      *
      * @since 5.3
      */
-    @Incubating
     ConfigurableFileCollection fileCollection();
 
     /**
@@ -116,13 +113,14 @@ public interface ObjectFactory {
      *
      * @since 6.0
      */
-    @Incubating
     ConfigurableFileTree fileTree();
 
     /**
      * <p>Creates a new {@link NamedDomainObjectContainer} for managing named objects of the specified type.</p>
      *
-     * <p>The specified element type must have a public constructor which takes the name as a String parameter. The type must be non-final and a class or abstract class. Interfaces are currently not supported.</p>
+     * <p>The specified element type must have a public constructor which takes the name as a String parameter. The type must be non-final and a class or abstract class.</p>
+     *
+     * <p>Interfaces are supported if they declare a read-only {@code name} property of type String, and are otherwise empty or consist entirely of managed properties.</p>
      *
      * <p>All objects <b>MUST</b> expose their name as a bean property called "name". The name must be constant for the life of the object.</p>
      *
@@ -133,7 +131,6 @@ public interface ObjectFactory {
      * @return The container. Never returns null.
      * @since 5.5
      */
-    @Incubating
     <T> NamedDomainObjectContainer<T> domainObjectContainer(Class<T> elementType);
 
     /**
@@ -147,7 +144,6 @@ public interface ObjectFactory {
      * @return The container. Never returns null.
      * @since 5.5
      */
-    @Incubating
     <T> NamedDomainObjectContainer<T> domainObjectContainer(Class<T> elementType, NamedDomainObjectFactory<T> factory);
 
     /**
@@ -160,7 +156,6 @@ public interface ObjectFactory {
      * @return The container.
      * @since 6.1
      */
-    @Incubating
     <T> ExtensiblePolymorphicDomainObjectContainer<T> polymorphicDomainObjectContainer(Class<T> elementType);
 
     /**
@@ -171,7 +166,6 @@ public interface ObjectFactory {
      * @return The domain object set. Never returns null.
      * @since 5.5
      */
-    @Incubating
     <T> DomainObjectSet<T> domainObjectSet(Class<T> elementType);
 
     /**
@@ -184,7 +178,6 @@ public interface ObjectFactory {
      * @return The domain object set.
      * @since 6.1
      */
-    @Incubating
     <T> NamedDomainObjectSet<T> namedDomainObjectSet(Class<T> elementType);
 
     /**
@@ -197,7 +190,6 @@ public interface ObjectFactory {
      * @return The domain object list.
      * @since 6.1
      */
-    @Incubating
     <T> NamedDomainObjectList<T> namedDomainObjectList(Class<T> elementType);
 
     /**
@@ -254,7 +246,6 @@ public interface ObjectFactory {
      * @return the property. Never returns null.
      * @since 5.1
      */
-    @Incubating
     <K, V> MapProperty<K, V> mapProperty(Class<K> keyType, Class<V> valueType);
 
     /**
@@ -262,7 +253,6 @@ public interface ObjectFactory {
      *
      * @since 5.0
      */
-    @Incubating
     DirectoryProperty directoryProperty();
 
     /**
@@ -270,6 +260,5 @@ public interface ObjectFactory {
      *
      * @since 5.0
      */
-    @Incubating
     RegularFileProperty fileProperty();
 }

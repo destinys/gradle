@@ -17,7 +17,7 @@
 package org.gradle.performance.regression.kotlindsl
 
 import org.gradle.performance.AbstractCrossVersionPerformanceTest
-import org.junit.Ignore
+import spock.lang.Ignore
 import spock.lang.Unroll
 
 @Ignore
@@ -28,7 +28,7 @@ class GradleKotlinDslBuildPerformanceTest extends AbstractCrossVersionPerformanc
         given:
         runner.testProject = testProject
         runner.tasksToRun = ['help']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
 
         when:
         def result = runner.run()
@@ -47,7 +47,7 @@ class GradleKotlinDslBuildPerformanceTest extends AbstractCrossVersionPerformanc
         given:
         runner.testProject = testProject
         runner.tasksToRun = ['help']
-        runner.targetVersions = ["6.8-20201028230040+0000"]
+        runner.targetVersions = ["6.9-20201210230047+0000"]
 
         when:
         def result = runner.run()

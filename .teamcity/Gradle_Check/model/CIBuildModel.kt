@@ -45,12 +45,11 @@ data class CIBuildModel(
             specificBuilds = listOf(
                 SpecificBuild.CompileAll, SpecificBuild.SanityCheck),
             functionalTests = listOf(
-                TestCoverage(1, TestType.quick, Os.LINUX, JvmCategory.MAX_VERSION)), omitsSlowProjects = true),
+                TestCoverage(1, TestType.quick, Os.LINUX, JvmCategory.MAX_VERSION))),
         Stage(StageNames.QUICK_FEEDBACK,
             functionalTests = listOf(
                 TestCoverage(2, TestType.quick, Os.WINDOWS, JvmCategory.MIN_VERSION)),
             functionalTestsDependOnSpecificBuilds = true,
-            omitsSlowProjects = true,
             dependsOnSanityCheck = true),
         Stage(StageNames.READY_FOR_MERGE,
             specificBuilds = listOf(
@@ -65,8 +64,7 @@ data class CIBuildModel(
                 TestCoverage(3, TestType.platform, Os.LINUX, JvmCategory.MIN_VERSION),
                 TestCoverage(4, TestType.platform, Os.WINDOWS, JvmCategory.MAX_VERSION),
                 TestCoverage(20, TestType.configCache, Os.LINUX, JvmCategory.MIN_VERSION)),
-            performanceTests = listOf(PerformanceTestCoverage(1, PerformanceTestType.test, Os.LINUX, numberOfBuckets = 40, oldUuid = "PerformanceTestTestLinux")),
-            omitsSlowProjects = true),
+            performanceTests = listOf(PerformanceTestCoverage(1, PerformanceTestType.per_commit, Os.LINUX, numberOfBuckets = 40, oldUuid = "PerformanceTestTestLinux"))),
         Stage(StageNames.READY_FOR_NIGHTLY,
             trigger = Trigger.eachCommit,
             specificBuilds = listOf(
@@ -77,8 +75,8 @@ data class CIBuildModel(
                 TestCoverage(6, TestType.quickFeedbackCrossVersion, Os.WINDOWS, JvmCategory.MIN_VERSION),
                 TestCoverage(28, TestType.watchFs, Os.LINUX, JvmCategory.MAX_VERSION)),
             performanceTests = listOf(
-                PerformanceTestCoverage(6, PerformanceTestType.test, Os.WINDOWS, numberOfBuckets = 5, failsStage = false),
-                PerformanceTestCoverage(7, PerformanceTestType.test, Os.MACOS, numberOfBuckets = 5, failsStage = false)
+                PerformanceTestCoverage(6, PerformanceTestType.per_commit, Os.WINDOWS, numberOfBuckets = 5, failsStage = false),
+                PerformanceTestCoverage(7, PerformanceTestType.per_commit, Os.MACOS, numberOfBuckets = 5, failsStage = false)
             )
         ),
         Stage(StageNames.READY_FOR_RELEASE,
@@ -102,7 +100,7 @@ data class CIBuildModel(
                 TestCoverage(31, TestType.watchFs, Os.MACOS, JvmCategory.MIN_VERSION),
                 TestCoverage(30, TestType.watchFs, Os.WINDOWS, JvmCategory.MAX_VERSION)),
             performanceTests = listOf(
-                PerformanceTestCoverage(2, PerformanceTestType.slow, Os.LINUX, numberOfBuckets = 30, oldUuid = "PerformanceTestSlowLinux")
+                PerformanceTestCoverage(2, PerformanceTestType.per_day, Os.LINUX, numberOfBuckets = 30, oldUuid = "PerformanceTestSlowLinux")
             )),
         Stage(StageNames.HISTORICAL_PERFORMANCE,
             trigger = Trigger.weekly,
@@ -111,9 +109,9 @@ data class CIBuildModel(
                 PerformanceTestCoverage(4, PerformanceTestType.flakinessDetection, Os.LINUX, numberOfBuckets = 60, oldUuid = "PerformanceTestFlakinessDetectionLinux"),
                 PerformanceTestCoverage(15, PerformanceTestType.flakinessDetection, Os.WINDOWS, numberOfBuckets = 10),
                 PerformanceTestCoverage(16, PerformanceTestType.flakinessDetection, Os.MACOS, numberOfBuckets = 10),
-                PerformanceTestCoverage(5, PerformanceTestType.experiment, Os.LINUX, numberOfBuckets = 20, oldUuid = "PerformanceTestExperimentLinux"),
-                PerformanceTestCoverage(8, PerformanceTestType.experiment, Os.WINDOWS, numberOfBuckets = 5),
-                PerformanceTestCoverage(9, PerformanceTestType.experiment, Os.MACOS, numberOfBuckets = 5)
+                PerformanceTestCoverage(5, PerformanceTestType.per_week, Os.LINUX, numberOfBuckets = 20, oldUuid = "PerformanceTestExperimentLinux"),
+                PerformanceTestCoverage(8, PerformanceTestType.per_week, Os.WINDOWS, numberOfBuckets = 5),
+                PerformanceTestCoverage(9, PerformanceTestType.per_week, Os.MACOS, numberOfBuckets = 5)
             )),
         Stage(StageNames.EXPERIMENTAL,
             trigger = Trigger.never,
@@ -168,10 +166,10 @@ data class CIBuildModel(
             trigger = Trigger.never,
             runsIndependent = true,
             performanceTests = listOf(
-                PerformanceTestCoverage(10, PerformanceTestType.test, Os.LINUX, numberOfBuckets = 40, withoutDependencies = true),
-                PerformanceTestCoverage(11, PerformanceTestType.test, Os.WINDOWS, numberOfBuckets = 5, withoutDependencies = true),
-                PerformanceTestCoverage(12, PerformanceTestType.test, Os.MACOS, numberOfBuckets = 5, withoutDependencies = true),
-                PerformanceTestCoverage(13, PerformanceTestType.slow, Os.LINUX, numberOfBuckets = 30, withoutDependencies = true)
+                PerformanceTestCoverage(10, PerformanceTestType.per_commit, Os.LINUX, numberOfBuckets = 40, withoutDependencies = true),
+                PerformanceTestCoverage(11, PerformanceTestType.per_commit, Os.WINDOWS, numberOfBuckets = 5, withoutDependencies = true),
+                PerformanceTestCoverage(12, PerformanceTestType.per_commit, Os.MACOS, numberOfBuckets = 5, withoutDependencies = true),
+                PerformanceTestCoverage(13, PerformanceTestType.per_day, Os.LINUX, numberOfBuckets = 30, withoutDependencies = true)
             )
         )
     ),
@@ -188,11 +186,10 @@ interface BuildTypeBucket {
     fun getDescription(testCoverage: TestCoverage): String = throw UnsupportedOperationException()
 }
 
-data class GradleSubproject(val name: String, val unitTests: Boolean = true, val functionalTests: Boolean = true, val crossVersionTests: Boolean = false, val containsSlowTests: Boolean = false) : BuildTypeBucket {
+data class GradleSubproject(val name: String, val unitTests: Boolean = true, val functionalTests: Boolean = true, val crossVersionTests: Boolean = false) : BuildTypeBucket {
     override fun createFunctionalTestsFor(model: CIBuildModel, stage: Stage, testCoverage: TestCoverage, bucketIndex: Int): FunctionalTest {
-        val uuid = if (containsSlowTests) testCoverage.asConfigurationId(model, name.kebabCaseToCamelCase()) else getUuid(model, testCoverage, bucketIndex)
         return FunctionalTest(model,
-            uuid,
+            getUuid(model, testCoverage, bucketIndex),
             getName(testCoverage),
             getDescription(testCoverage),
 
@@ -236,7 +233,6 @@ data class Stage(
     val trigger: Trigger = Trigger.never,
     val functionalTestsDependOnSpecificBuilds: Boolean = false,
     val runsIndependent: Boolean = false,
-    val omitsSlowProjects: Boolean = false,
     val dependsOnSanityCheck: Boolean = false
 ) {
     val id = stageName.id
@@ -306,19 +302,19 @@ enum class PerformanceTestType(
     val channel: String,
     val extraParameters: String = ""
 ) {
-    test(
+    per_commit(
         displayName = "Performance Regression Test",
         timeout = 420,
         defaultBaselines = "defaults",
         channel = "commits"
     ),
-    slow(
+    per_day(
         displayName = "Slow Performance Regression Test",
         timeout = 420,
         defaultBaselines = "defaults",
         channel = "commits"
     ),
-    experiment(
+    per_week(
         displayName = "Performance Experiment",
         timeout = 420,
         defaultBaselines = "defaults",
